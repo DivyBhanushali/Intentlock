@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { auditApi, type AuditStats, type AuditEvent } from "@/lib/api";
+import { auditApi, API_BASE, type AuditStats, type AuditEvent } from "@/lib/api";
 import { StatCard } from "@/components/stat-card";
 import { VerdictBadge } from "@/components/verdict-badge";
 import { formatDate } from "@/lib/utils";
@@ -156,7 +156,7 @@ export default function DashboardPage() {
             <XCircleIcon size={16} /> Backend Connection Offline
           </div>
           <p className="mt-1 text-slate-400">
-            Could not reach FastAPI at <code className="text-emerald-400">http://localhost:8000</code>. Please start the backend service.
+            Could not reach FastAPI at <code className="text-emerald-400">{API_BASE}</code>. {error}
           </p>
         </div>
       )}

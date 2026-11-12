@@ -99,7 +99,7 @@ export function Sidebar() {
           </div>
           <div className="mt-2 pt-2 border-t border-[#1a2233] flex justify-between items-center text-[10px]">
             <a
-              href="http://localhost:8000/docs"
+              href="https://intentlock-backend-ze2i.onrender.com/docs"
               target="_blank"
               rel="noreferrer"
               className="text-slate-400 hover:text-emerald-400 transition-colors"
