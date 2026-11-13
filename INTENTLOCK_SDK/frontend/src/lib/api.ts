@@ -255,4 +255,195 @@ export const teamApi = {
     apiFetch<void>(`/auth/api-keys/${id}`, { method: "DELETE" }),
 };
 
+// ─── Intent Authorization Context ───
+
+export interface IntentContext {
+  id: string;
+  org_id: string;
+  agent_id: string;
+  user_id: string;
+  authorized_objective: string;
+  allowed_actions: string[];
+  denied_actions: string[];
+  allowed_permissions: string[];
+  allowed_resources: string[];
+  allowed_recipients: string[];
+  sensitivity_ceiling: number;
+  execution_scope: string;
+  expiration_timestamp: string;
+  context_status: "ACTIVE" | "REVOKED" | "EXPIRED" | "CONSUMED";
+  authorization_version: number;
+  created_at: string;
+  revocation_reason?: string;
+}
+
+export interface IntentCreate {
+  agent_id: string;
+  authorized_objective: string;
+  allowed_actions?: string[];
+  denied_actions?: string[];
+  allowed_permissions?: string[];
+  allowed_resources?: string[];
+  allowed_recipients?: string[];
+  sensitivity_ceiling?: number;
+  execution_scope?: string;
+  duration_seconds?: number;
+}
+
+export const intentsApi = {
+  list: (status?: string) =>
+    apiFetch<IntentContext[]>(`/intents${status ? `?status=${status}` : ""}`),
+  get: (id: string) => apiFetch<IntentContext>(`/intents/${id}`),
+  create: (data: IntentCreate) =>
+    apiFetch<IntentContext>("/intents", { method: "POST", body: JSON.stringify(data) }),
+  revoke: (id: string, reason: string) =>
+    apiFetch<IntentContext>(`/intents/${id}/revoke`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }),
+};
+
+// ─── Provenance & Evidence Graph ───
+
+export interface TraceSummary {
+  trace_id: string;
+  agent_id: string;
+  event_count: number;
+  start_time: string;
+  last_time: string;
+  tools_called: string[];
+  verdicts: string[];
+  intent_id?: string;
+}
+
+export interface ProvenanceNode {
+  type: string;
+  id: string;
+  label: string;
+  details: Record<string, unknown>;
+  timestamp?: string;
+}
+
+export interface ProvenanceEdge {
+  from_id: string;
+  to_id: string;
+  relationship: string;
+}
+
+export interface ProvenanceDetail {
+  trace_id: string;
+  org_id: string;
+  agent_id: string;
+  intent_context: IntentContext | null;
+  causal_explanation: string;
+  nodes: ProvenanceNode[];
+  edges: ProvenanceEdge[];
+  raw_events: AuditEvent[];
+}
+
+export const provenanceApi = {
+  listTraces: (limit = 50) =>
+    apiFetch<TraceSummary[]>(`/provenance?limit=${limit}`),
+  getDetail: (traceId: string) =>
+    apiFetch<ProvenanceDetail>(`/provenance/${traceId}`),
+};
+
+// ─── Threat Intelligence & Mitigation ───
+
+export interface SecurityThreat {
+  id: string;
+  org_id: string;
+  agent_id: string;
+  threat_category: string;
+  severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  description: string;
+  detection_rule: string;
+  related_trace_id?: string;
+  recommended_response: string;
+  mitigation_status: "ACTIVE" | "MITIGATED" | "DISMISSED";
+  created_at: string;
+}
+
+export interface ThreatStats {
+  total_threats: number;
+  active_threats: number;
+  critical_threats: number;
+  high_threats: number;
+  categories: Record<string, number>;
+}
+
+export const threatsApi = {
+  list: (status?: string, severity?: string) => {
+    const params = new URLSearchParams();
+    if (status) params.append("status", status);
+    if (severity) params.append("severity", severity);
+    const qs = params.toString();
+    return apiFetch<SecurityThreat[]>(`/threats${qs ? `?${qs}` : ""}`);
+  },
+  stats: () => apiFetch<ThreatStats>("/threats/stats"),
+  mitigate: (threatId: string, status: "MITIGATED" | "DISMISSED", note?: string) =>
+    apiFetch<SecurityThreat>(`/threats/${threatId}/mitigate`, {
+      method: "POST",
+      body: JSON.stringify({ status, note }),
+    }),
+};
+
+// ─── Adversarial Benchmark ───
+
+export interface BenchmarkScenario {
+  vector_id: string;
+  name: string;
+  category: string;
+  attack_payload: string;
+  expected_verdict: string;
+  actual_verdict: string;
+  status: "PASSED" | "FAILED";
+  latency_ms: number;
+  mitigation_layer: string;
+}
+
+export interface BenchmarkRun {
+  id: string;
+  org_id: string;
+  total_scenarios: number;
+  passed_scenarios: number;
+  failed_scenarios: number;
+  block_rate: number;
+  average_latency_ms: number;
+  report_json: {
+    total_scenarios: number;
+    passed_scenarios: number;
+    failed_scenarios: number;
+    block_rate: number;
+    average_latency_ms: number;
+    scenarios: BenchmarkScenario[];
+    duration_ms: number;
+    timestamp: string;
+  };
+  created_at: string;
+}
+
+export const benchmarksApi = {
+  run: () => apiFetch<BenchmarkRun>("/benchmarks/run", { method: "POST" }),
+  getLatest: () => apiFetch<BenchmarkRun>("/benchmarks/latest"),
+  list: () => apiFetch<BenchmarkRun[]>("/benchmarks"),
+  get: (id: string) => apiFetch<BenchmarkRun>(`/benchmarks/${id}`),
+};
+
+// ─── Cryptographic Audit Verification ───
+
+export interface AuditVerifyReport {
+  verified: boolean;
+  total_records: number;
+  valid_records: number;
+  corrupted_records: number;
+  first_corrupted_id: string | null;
+  details: string;
+}
+
+export const auditVerifyApi = {
+  verify: () => apiFetch<AuditVerifyReport>("/audit/verify"),
+};
+
+
 

@@ -10,10 +10,29 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.db.session import get_db
 from app.db.models import AuditEventModel, AgentModel
-from app.schemas.schemas import AuditEventResponse, AuditStatsResponse
+from app.schemas.schemas import AuditEventResponse, AuditStatsResponse, AuditVerifyResponse
+from app.api.deps import get_current_tenant, TenantContext
+from app.core.audit_chain import verify_audit_chain
 from intentlock.models import DecisionVerdict
 
 router = APIRouter(prefix="/audit", tags=["Audit"])
+
+
+@router.get("/verify", response_model=AuditVerifyResponse)
+def verify_audit_log_chain(
+    db: Session = Depends(get_db),
+    tenant: Optional[TenantContext] = Depends(get_current_tenant),
+):
+    """
+    Cryptographically verify the SHA-256 sequential hash chain of the audit trail.
+    Detects any tampering, deletion, modification, or sequence corruption.
+    """
+    if tenant is None or not isinstance(tenant, TenantContext):
+        tenant = TenantContext(org_id="default-org", org_name="Default Organization", plan="ENTERPRISE")
+
+    report = verify_audit_chain(db, org_id=tenant.org_id)
+    return AuditVerifyResponse(**report)
+
 
 
 @router.get("/events", response_model=List[AuditEventResponse])

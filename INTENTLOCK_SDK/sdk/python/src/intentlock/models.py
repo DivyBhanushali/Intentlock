@@ -125,6 +125,14 @@ class ToolCall(BaseModel):
         default="",
         description="Target recipient (email, user ID), if applicable.",
     )
+    intent_id: str = Field(
+        default="",
+        description="Optional task-scoped Intent Authorization Context ID.",
+    )
+    trace_id: str = Field(
+        default_factory=lambda: str(uuid.uuid4()),
+        description="Distributed execution trace identifier.",
+    )
 
     @field_validator("tool_name")
     @classmethod
@@ -146,11 +154,99 @@ class ToolCall(BaseModel):
                 "sensitivity": self.sensitivity,
                 "resource_id": self.resource_id,
                 "recipient": self.recipient,
+                "intent_id": self.intent_id,
             },
             sort_keys=True,
             default=str,
         )
         return hashlib.sha256(payload.encode()).hexdigest()
+
+
+class IntentContext(BaseModel):
+    """
+    Cryptographically verifiable task-scoped Intent Authorization Context.
+    Created by a trusted user/principal BEFORE autonomous agent execution.
+    Immutable once authorized.
+    """
+    intent_id: str = Field(
+        default_factory=lambda: f"itc_{uuid.uuid4().hex[:12]}",
+        description="Unique identifier for this intent authorization context.",
+    )
+    org_id: str = Field(
+        default="default-org",
+        description="Organization / workspace tenant scope.",
+    )
+    user_id: str = Field(
+        default="system",
+        description="Trusted principal who authorized the task.",
+    )
+    agent_id: str = Field(
+        default="default-agent",
+        description="AI agent assigned to execute within this context.",
+    )
+    authorized_objective: str = Field(
+        ...,
+        description="Human-readable authorized task/objective statement.",
+    )
+    allowed_actions: list[str] = Field(
+        default_factory=list,
+        description="Explicitly authorized tool actions for this specific task.",
+    )
+    denied_actions: list[str] = Field(
+        default_factory=list,
+        description="Explicitly forbidden actions for this task (overrides all).",
+    )
+    allowed_permissions: list[str] = Field(
+        default_factory=list,
+        description="Permissions granted for this specific task.",
+    )
+    allowed_resources: list[str] = Field(
+        default_factory=list,
+        description="Target resource glob patterns permitted for this task.",
+    )
+    allowed_recipients: list[str] = Field(
+        default_factory=list,
+        description="Allowed target recipients (emails, domains, endpoints).",
+    )
+    sensitivity_ceiling: int = Field(
+        default=5,
+        ge=0,
+        le=10,
+        description="Maximum data sensitivity permitted under this task.",
+    )
+    execution_scope: str = Field(
+        default="default",
+        description="Execution boundary tag (e.g. read-only, staging, production).",
+    )
+    expiration_timestamp: datetime = Field(
+        ...,
+        description="UTC timestamp after which this intent context expires.",
+    )
+    context_status: str = Field(
+        default="ACTIVE",
+        description="Status: ACTIVE, REVOKED, EXPIRED, CONSUMED.",
+    )
+    authorization_version: int = Field(
+        default=1,
+        description="Schema and authorization specification version.",
+    )
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="Timestamp when authorization was issued.",
+    )
+
+    def is_expired(self, now: Optional[datetime] = None) -> bool:
+        """Check if this intent context has passed its expiration timestamp."""
+        check_time = now or datetime.now(timezone.utc)
+        exp = self.expiration_timestamp
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        return check_time > exp
+
+    def is_valid(self, now: Optional[datetime] = None) -> bool:
+        """True only if status is ACTIVE and not expired."""
+        return self.context_status == "ACTIVE" and not self.is_expired(now)
+
 
 
 class Decision(BaseModel):
@@ -196,6 +292,9 @@ class Decision(BaseModel):
         description="UTC timestamp of the decision.",
     )
     agent_id: str = Field(default="", description="Agent that requested the action.")
+    intent_id: str = Field(default="", description="Bound intent authorization context.")
+    trace_id: str = Field(default="", description="Trace correlation identifier.")
+    policy_version: int = Field(default=1, description="Exact version of policy evaluated.")
     metadata: dict[str, Any] = Field(
         default_factory=dict,
         description="Additional context (never secrets).",
@@ -221,6 +320,14 @@ class ApprovalRequest(BaseModel):
     agent_id: str = Field(
         default="",
         description="Requesting agent.",
+    )
+    intent_id: str = Field(
+        default="",
+        description="Intent context this approval is bound to.",
+    )
+    policy_version: int = Field(
+        default=1,
+        description="Policy version under which approval was requested.",
     )
     status: ApprovalStatus = Field(
         default=ApprovalStatus.PENDING,

@@ -128,6 +128,51 @@ class AgentResponse(BaseModel):
 
 
 # -----------------------------------------------------------------------------
+# Intent Authorization Context Schemas
+# -----------------------------------------------------------------------------
+
+class IntentContextCreate(BaseModel):
+    agent_id: str = Field(..., min_length=1)
+    authorized_objective: str = Field(..., min_length=3)
+    allowed_actions: list[str] = Field(default_factory=list)
+    denied_actions: list[str] = Field(default_factory=list)
+    allowed_permissions: list[str] = Field(default_factory=list)
+    allowed_resources: list[str] = Field(default_factory=list)
+    allowed_recipients: list[str] = Field(default_factory=list)
+    sensitivity_ceiling: int = Field(default=5, ge=0, le=10)
+    execution_scope: str = Field(default="default")
+    ttl_seconds: int = Field(default=3600, ge=60, le=86400 * 7)
+
+
+class IntentContextRevoke(BaseModel):
+    reason: str = Field(default="Revoked by administrator")
+
+
+class IntentContextResponse(BaseModel):
+    id: str
+    org_id: str
+    user_id: str
+    agent_id: str
+    authorized_objective: str
+    allowed_actions: list[str] = Field(default_factory=list)
+    denied_actions: list[str] = Field(default_factory=list)
+    allowed_permissions: list[str] = Field(default_factory=list)
+    allowed_resources: list[str] = Field(default_factory=list)
+    allowed_recipients: list[str] = Field(default_factory=list)
+    sensitivity_ceiling: int
+    execution_scope: str
+    expiration_timestamp: datetime
+    context_status: str
+    authorization_version: int
+    revoked_at: Optional[datetime] = None
+    revoked_reason: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+
+# -----------------------------------------------------------------------------
 # Intercept (Remote Gateway) Schemas
 # -----------------------------------------------------------------------------
 
@@ -140,6 +185,8 @@ class InterceptRequest(BaseModel):
     resource_id: str = Field(default="")
     recipient: str = Field(default="")
     approval_id: Optional[str] = None
+    intent_id: Optional[str] = None
+    trace_id: Optional[str] = None
 
 
 class InterceptResponse(BaseModel):
@@ -151,5 +198,87 @@ class InterceptResponse(BaseModel):
     risk_score: float
     risk_level: RiskLevel
     approval_id: Optional[str] = None
+    intent_id: Optional[str] = None
+    trace_id: Optional[str] = None
+    policy_version: int = 1
     execution_result: Optional[Any] = None
+
+
+# -----------------------------------------------------------------------------
+# Security Threat Intelligence & Containment Schemas
+# -----------------------------------------------------------------------------
+
+class SecurityThreatResponse(BaseModel):
+    id: str
+    org_id: str
+    agent_id: str
+    threat_category: str
+    severity: str
+    description: str
+    detection_rule: str
+    related_trace_id: Optional[str] = None
+    recommended_response: str
+    mitigation_status: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ThreatMitigateRequest(BaseModel):
+    status: str = Field(..., pattern="^(MITIGATED|DISMISSED)$")
+    note: Optional[str] = None
+
+
+class ThreatStatsResponse(BaseModel):
+    total_threats: int
+    active_threats: int
+    critical_threats: int
+    high_threats: int
+    categories: dict[str, int]
+
+
+# -----------------------------------------------------------------------------
+# Cryptographic Audit Verification Schemas
+# -----------------------------------------------------------------------------
+
+class AuditVerifyResponse(BaseModel):
+    verified: bool
+    total_records: int
+    valid_records: int
+    corrupted_records: int
+    first_corrupted_id: Optional[str] = None
+    details: str
+
+
+# -----------------------------------------------------------------------------
+# Adversarial Security Benchmark Schemas
+# -----------------------------------------------------------------------------
+
+class BenchmarkScenarioResult(BaseModel):
+    vector_id: str
+    name: str
+    category: str
+    attack_payload: str
+    expected_verdict: str
+    actual_verdict: str
+    status: str
+    latency_ms: float
+    mitigation_layer: str
+
+
+class BenchmarkRunResponse(BaseModel):
+    id: str
+    org_id: str
+    total_scenarios: int
+    passed_scenarios: int
+    failed_scenarios: int
+    block_rate: float
+    average_latency_ms: float
+    report_json: dict[str, Any]
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+
 

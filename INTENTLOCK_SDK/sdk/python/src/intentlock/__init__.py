@@ -15,6 +15,7 @@ Quick start::
 """
 
 from intentlock.agent import SecureAgent
+from intentlock.client import IntentLockClient
 from intentlock.models import (
     ApprovalRequest,
     ApprovalStatus,
@@ -22,6 +23,7 @@ from intentlock.models import (
     Config,
     Decision,
     DecisionVerdict,
+    IntentContext,
     Policy,
     RegisteredTool,
     RiskLevel,
@@ -37,6 +39,7 @@ __version__ = "0.1.0"
 
 __all__ = [
     "SecureAgent",
+    "IntentLockClient",
     "Config",
     "Policy",
     "ToolCall",
@@ -46,6 +49,7 @@ __all__ = [
     "ApprovalStatus",
     "AuditEvent",
     "ApprovalRequest",
+    "IntentContext",
     "RegisteredTool",
     "SecureTool",
     "secure_langchain_tool",

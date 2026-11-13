@@ -76,6 +76,8 @@ class MCPSecurityProxy:
         arguments: Dict[str, Any],
         user_request: str = "",
         approval_id: Optional[str] = None,
+        intent_id: Optional[str] = None,
+        trace_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Handle an MCP `tools/call` invocation directly.
@@ -88,6 +90,8 @@ class MCPSecurityProxy:
             arguments=arguments,
             agent_id=self.agent_id,
             user_request=user_request,
+            intent_id=intent_id or "",
+            trace_id=trace_id or "",
         )
 
         try:
@@ -194,12 +198,16 @@ class MCPSecurityProxy:
             arguments = params.get("arguments", {})
             user_request = params.get("user_request", "")
             approval_id = params.get("approval_id")
+            intent_id = params.get("intent_id")
+            trace_id = params.get("trace_id")
 
             tool_result = self.handle_call_tool(
                 name=tool_name,
                 arguments=arguments,
                 user_request=user_request,
                 approval_id=approval_id,
+                intent_id=intent_id,
+                trace_id=trace_id,
             )
 
             return {

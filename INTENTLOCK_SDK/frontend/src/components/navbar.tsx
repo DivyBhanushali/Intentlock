@@ -19,11 +19,14 @@ import {
 
 const navItems = [
   { href: "/", label: "Overview", icon: ChartIcon },
-  { href: "/agents", label: "Agents", icon: TerminalIcon },
+  { href: "/intents", label: "Intents", icon: LockIcon },
+  { href: "/provenance", label: "Provenance", icon: DocumentIcon },
+  { href: "/threats", label: "Threats", icon: ShieldIcon },
+  { href: "/benchmark", label: "Benchmark", icon: BeakerIcon },
   { href: "/policies", label: "Policies", icon: DocumentIcon },
   { href: "/approvals", label: "Approvals", icon: ClockIcon },
   { href: "/audit", label: "Audit Log", icon: ListIcon },
-  { href: "/test", label: "Playground", icon: BeakerIcon },
+  { href: "/test", label: "Playground", icon: TerminalIcon },
   { href: "/team", label: "Team & Keys", icon: UsersIcon },
 ];
 
