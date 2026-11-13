@@ -200,3 +200,59 @@ export const interceptApi = {
     }),
 };
 
+// ─── Team & API Keys Management ───
+
+export type UserRole = "ADMIN" | "APPROVER" | "VIEWER";
+
+export interface TeamMember {
+  id: string;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  org_id: string;
+  created_at: string;
+  last_login_at: string | null;
+}
+
+export interface MemberInvite {
+  email: string;
+  password: string;
+  full_name: string;
+  role: UserRole;
+}
+
+export interface MemberUpdate {
+  role?: UserRole;
+  full_name?: string;
+}
+
+export interface ApiKeyItem {
+  id: string;
+  name: string;
+  key_prefix: string;
+  is_active: boolean;
+  created_at: string;
+  last_used_at: string | null;
+  raw_key?: string;
+}
+
+export interface ApiKeyCreate {
+  name: string;
+}
+
+export const teamApi = {
+  listMembers: () => apiFetch<TeamMember[]>("/auth/members"),
+  inviteMember: (data: MemberInvite) =>
+    apiFetch<TeamMember>("/auth/members", { method: "POST", body: JSON.stringify(data) }),
+  updateMember: (id: string, data: MemberUpdate) =>
+    apiFetch<TeamMember>(`/auth/members/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  removeMember: (id: string) =>
+    apiFetch<void>(`/auth/members/${id}`, { method: "DELETE" }),
+  listApiKeys: () => apiFetch<ApiKeyItem[]>("/auth/api-keys"),
+  createApiKey: (data: ApiKeyCreate) =>
+    apiFetch<ApiKeyItem>("/auth/api-keys", { method: "POST", body: JSON.stringify(data) }),
+  revokeApiKey: (id: string) =>
+    apiFetch<void>(`/auth/api-keys/${id}`, { method: "DELETE" }),
+};
+
+

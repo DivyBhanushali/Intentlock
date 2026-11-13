@@ -14,15 +14,17 @@ import {
   ListIcon,
   BeakerIcon,
   LockIcon,
+  TerminalIcon,
 } from "@/components/icons";
 
 const navItems = [
   { href: "/", label: "Overview", icon: ChartIcon },
-  { href: "/agents", label: "Agents", icon: UsersIcon },
+  { href: "/agents", label: "Agents", icon: TerminalIcon },
   { href: "/policies", label: "Policies", icon: DocumentIcon },
   { href: "/approvals", label: "Approvals", icon: ClockIcon },
   { href: "/audit", label: "Audit Log", icon: ListIcon },
   { href: "/test", label: "Playground", icon: BeakerIcon },
+  { href: "/team", label: "Team & Keys", icon: UsersIcon },
 ];
 
 export function Navbar() {

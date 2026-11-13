@@ -126,3 +126,29 @@ def require_authenticated_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     return tenant.user
+
+
+def require_admin_user(
+    user: UserModel = Depends(require_authenticated_user),
+) -> UserModel:
+    """Enforce that the authenticated user has the ADMIN role."""
+    if user.role != "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Administrative privileges required for this action.",
+        )
+    return user
+
+
+def require_approver_or_admin(
+    user: UserModel = Depends(require_authenticated_user),
+) -> UserModel:
+    """Enforce that the authenticated user has APPROVER or ADMIN role."""
+    if user.role not in ("ADMIN", "APPROVER"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Approver or Administrative privileges required.",
+        )
+    return user
+
+

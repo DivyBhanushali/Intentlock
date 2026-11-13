@@ -137,3 +137,4 @@ def generate_api_key() -> Tuple[str, str, str]:
 def hash_api_key(raw_key: str) -> str:
     """Deterministic hash of API key for storage in database."""
     return hashlib.sha256(f"ilk:{raw_key}:{settings.SECRET_KEY}".encode("utf-8")).hexdigest()
+

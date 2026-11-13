@@ -14,7 +14,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.api.deps import TenantContext, get_current_tenant, get_db, require_authenticated_user
+from app.api.deps import (
+    TenantContext,
+    get_current_tenant,
+    get_db,
+    require_admin_user,
+    require_authenticated_user,
+)
 from app.core.security import (
     create_access_token,
     generate_api_key,
@@ -69,6 +75,29 @@ class ApiKeyResponse(BaseModel):
     created_at: datetime
     last_used_at: Optional[datetime] = None
     raw_key: Optional[str] = None  # Only returned on creation
+
+
+class MemberResponse(BaseModel):
+    id: str
+    email: str
+    full_name: str
+    role: str
+    org_id: str
+    created_at: datetime
+    last_login_at: Optional[datetime] = None
+
+
+class MemberInviteRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=256)
+    password: str = Field(min_length=6)
+    full_name: str = "Team Member"
+    role: str = Field(default="APPROVER", pattern=r"^(ADMIN|APPROVER|VIEWER)$")
+
+
+class MemberUpdateRequest(BaseModel):
+    role: Optional[str] = Field(default=None, pattern=r"^(ADMIN|APPROVER|VIEWER)$")
+    full_name: Optional[str] = None
+
 
 
 # ─── Endpoints ──────────────────────────────────────────────────────────────
@@ -252,3 +281,115 @@ def revoke_api_key(
 
     key.is_active = False
     db.commit()
+
+
+# ─── Team Members & Access Control Management ──────────────────────────────
+
+@router.get("/members", response_model=List[MemberResponse])
+def list_team_members(
+    user: UserModel = Depends(require_authenticated_user),
+    tenant: TenantContext = Depends(get_current_tenant),
+    db: Session = Depends(get_db),
+):
+    """List all registered team members in the current organization."""
+    members = (
+        db.query(UserModel)
+        .filter(UserModel.org_id == tenant.org_id)
+        .order_by(UserModel.created_at.asc())
+        .all()
+    )
+    return members
+
+
+@router.post("/members", response_model=MemberResponse, status_code=status.HTTP_201_CREATED)
+def invite_team_member(
+    req: MemberInviteRequest,
+    current_admin: UserModel = Depends(require_admin_user),
+    tenant: TenantContext = Depends(get_current_tenant),
+    db: Session = Depends(get_db),
+):
+    """Add / invite a new team member to the organization with assigned RBAC role."""
+    existing = db.query(UserModel).filter(UserModel.email == req.email.lower()).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A user with this email address already exists.",
+        )
+
+    new_user = UserModel(
+        id=f"usr_{uuid.uuid4().hex[:12]}",
+        org_id=tenant.org_id,
+        email=req.email.lower(),
+        full_name=req.full_name,
+        password_hash=hash_password(req.password),
+        role=req.role.upper(),
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+
+@router.patch("/members/{user_id}", response_model=MemberResponse)
+def update_team_member(
+    user_id: str,
+    req: MemberUpdateRequest,
+    current_admin: UserModel = Depends(require_admin_user),
+    tenant: TenantContext = Depends(get_current_tenant),
+    db: Session = Depends(get_db),
+):
+    """Update a team member's role or display name."""
+    target = db.query(UserModel).filter(
+        UserModel.id == user_id,
+        UserModel.org_id == tenant.org_id,
+    ).first()
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team member not found.")
+
+    # Guard: cannot demote yourself if you are the only ADMIN
+    if target.id == current_admin.id and req.role and req.role != "ADMIN":
+        admin_count = (
+            db.query(UserModel)
+            .filter(UserModel.org_id == tenant.org_id, UserModel.role == "ADMIN")
+            .count()
+        )
+        if admin_count <= 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot demote the only administrator of the organization.",
+            )
+
+    if req.role:
+        target.role = req.role.upper()
+    if req.full_name is not None:
+        target.full_name = req.full_name
+
+    db.commit()
+    db.refresh(target)
+    return target
+
+
+@router.delete("/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_team_member(
+    user_id: str,
+    current_admin: UserModel = Depends(require_admin_user),
+    tenant: TenantContext = Depends(get_current_tenant),
+    db: Session = Depends(get_db),
+):
+    """Remove a team member from the organization."""
+    if current_admin.id == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot remove your own account from the organization.",
+        )
+
+    target = db.query(UserModel).filter(
+        UserModel.id == user_id,
+        UserModel.org_id == tenant.org_id,
+    ).first()
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team member not found.")
+
+    db.delete(target)
+    db.commit()
+
