@@ -89,40 +89,7 @@ class PolicyEngine:
                 now=now,
             )
 
-        # ---- Step 4: Requires approval --------------------------------
-        if permission in policy.require_approval_permissions:
-            return Decision(
-                verdict=DecisionVerdict.REQUIRE_APPROVAL,
-                tool_name=tool_call.tool_name,
-                reason="APPROVAL_REQUIRED",
-                policy_id=policy.policy_id,
-                action_hash=action_hash,
-                agent_id=tool_call.agent_id,
-                timestamp=now,
-            )
-
-        # ---- Step 5: Permission not granted (deny-by-default) ----------
-        if permission not in policy.allowed_permissions:
-            return self._deny(
-                tool_call=tool_call,
-                reason="PERMISSION_NOT_GRANTED",
-                action_hash=action_hash,
-                policy_id=policy.policy_id,
-                now=now,
-            )
-
-        # ---- Step 6: Sensitivity ceiling ------------------------------
-        effective_sensitivity = max(tool_call.sensitivity, tool_descriptor.sensitivity)
-        if effective_sensitivity > policy.max_sensitivity:
-            return self._deny(
-                tool_call=tool_call,
-                reason="SENSITIVITY_TOO_HIGH",
-                action_hash=action_hash,
-                policy_id=policy.policy_id,
-                now=now,
-            )
-
-        # ---- Step 7: Recipient allow-list ------------------------------
+        # ---- Step 4: Recipient allow-list (Exfiltration boundary) ------
         if (
             tool_call.recipient
             and policy.allowed_recipients
@@ -139,7 +106,7 @@ class PolicyEngine:
                 now=now,
             )
 
-        # ---- Step 8: Resource glob matching ----------------------------
+        # ---- Step 5: Resource glob matching (Scope boundary) ----------
         if (
             tool_call.resource_id
             and policy.allowed_resources
@@ -148,6 +115,46 @@ class PolicyEngine:
                 for pattern in policy.allowed_resources
             )
         ):
+            return self._deny(
+                tool_call=tool_call,
+                reason="RESOURCE_OUT_OF_SCOPE",
+                action_hash=action_hash,
+                policy_id=policy.policy_id,
+                now=now,
+            )
+
+        # ---- Step 6: Requires approval --------------------------------
+        if permission in policy.require_approval_permissions:
+            return Decision(
+                verdict=DecisionVerdict.REQUIRE_APPROVAL,
+                tool_name=tool_call.tool_name,
+                reason="APPROVAL_REQUIRED",
+                policy_id=policy.policy_id,
+                action_hash=action_hash,
+                agent_id=tool_call.agent_id,
+                timestamp=now,
+            )
+
+        # ---- Step 7: Permission not granted (deny-by-default) ----------
+        if permission not in policy.allowed_permissions:
+            return self._deny(
+                tool_call=tool_call,
+                reason="PERMISSION_NOT_GRANTED",
+                action_hash=action_hash,
+                policy_id=policy.policy_id,
+                now=now,
+            )
+
+        # ---- Step 8: Sensitivity ceiling ------------------------------
+        effective_sensitivity = max(tool_call.sensitivity, tool_descriptor.sensitivity)
+        if effective_sensitivity > policy.max_sensitivity:
+            return self._deny(
+                tool_call=tool_call,
+                reason="SENSITIVITY_TOO_HIGH",
+                action_hash=action_hash,
+                policy_id=policy.policy_id,
+                now=now,
+            )
             return self._deny(
                 tool_call=tool_call,
                 reason="RESOURCE_OUT_OF_SCOPE",
