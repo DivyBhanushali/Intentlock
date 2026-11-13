@@ -343,3 +343,4 @@ def send_corporate_email(recipient_address: str, subject: str, body: str) -> str
 ## 9. Conclusion
 
 INTENTLOCK transforms AI agent deployments from an uncontrollable enterprise liability into a secure, auditable, and mathematically constrained asset. By enforcing deterministic policies ahead of tool execution, organizations can confidently launch autonomous workflows knowing that prompt injections, data exfiltration, and unauthorized actions will be intercepted and neutralized in real time.
+
