@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { Navbar } from "@/components/navbar";
+import { AuthProvider } from "@/lib/auth";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "INTENTLOCK · Security Dashboard",
+  title: "INTENTLOCK · Enterprise Security Operations Center",
   description:
-    "Developer Security Dashboard for the IntentLock AI Agent Security Middleware",
+    "Zero-Trust Security Middleware & IAM Execution Guard for Autonomous AI Agents",
 };
 
 export default function RootLayout({
@@ -16,10 +17,12 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="il-body">
-        <Navbar />
-        <main className="il-main-container">
-          {children}
-        </main>
+        <AuthProvider>
+          <Navbar />
+          <main className="il-main-container">
+            {children}
+          </main>
+        </AuthProvider>
       </body>
     </html>
   );
