@@ -167,3 +167,4 @@ def test_policy_templates(gov_db):
     assert created.name == "Read-Only Data Analyst"
     assert "database:read" in created.allowed_permissions
     assert "database:drop" in created.denied_permissions
+

@@ -203,3 +203,4 @@ class IntentLockClient:
             trace_id=res.get("trace_id", "") or "",
             metadata={"approval_id": res.get("approval_id")},
         )
+

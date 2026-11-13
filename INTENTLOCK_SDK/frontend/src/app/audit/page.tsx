@@ -3,15 +3,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { auditApi, type AuditEvent, type DecisionVerdict } from "@/lib/api";
+import { auditApi, auditVerifyApi, type AuditEvent, type DecisionVerdict, type AuditVerifyReport } from "@/lib/api";
 import { VerdictBadge } from "@/components/verdict-badge";
 import { formatDate } from "@/lib/utils";
-import { ListIcon, RefreshIcon, InfoIcon } from "@/components/icons";
+import { ListIcon, RefreshIcon, InfoIcon, ShieldIcon, CheckCircleIcon } from "@/components/icons";
 
 export default function AuditPage() {
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [verifyReport, setVerifyReport] = useState<AuditVerifyReport | null>(null);
+  const [verifying, setVerifying] = useState(false);
 
   // Filters
   const [verdictFilter, setVerdictFilter] = useState<string>("ALL");
@@ -19,17 +21,33 @@ export default function AuditPage() {
   const [agentSearch, setAgentSearch] = useState<string>("");
   const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
 
+  async function handleVerifyChain() {
+    setVerifying(true);
+    try {
+      const rep = await auditVerifyApi.verify();
+      setVerifyReport(rep);
+    } catch (err) {
+      alert("Failed to verify audit chain: " + String(err));
+    } finally {
+      setVerifying(false);
+    }
+  }
+
   async function fetchEvents() {
     setLoading(true);
     setError(null);
     try {
-      const data = await auditApi.list({
-        verdict: verdictFilter !== "ALL" ? verdictFilter : undefined,
-        tool_name: toolSearch.trim() || undefined,
-        agent_id: agentSearch.trim() || undefined,
-        limit: 50,
-      });
+      const [data, rep] = await Promise.all([
+        auditApi.list({
+          verdict: verdictFilter !== "ALL" ? verdictFilter : undefined,
+          tool_name: toolSearch.trim() || undefined,
+          agent_id: agentSearch.trim() || undefined,
+          limit: 50,
+        }),
+        auditVerifyApi.verify().catch(() => null),
+      ]);
       setEvents(data);
+      if (rep) setVerifyReport(rep);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load audit events");
     } finally {
@@ -64,15 +82,46 @@ export default function AuditPage() {
           </p>
         </div>
 
-        <button
-          onClick={fetchEvents}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[#1a2233] bg-[#0d111a] px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-[#121824] hover:text-slate-100 transition-colors disabled:opacity-50"
-        >
-          <RefreshIcon size={14} className={loading ? "animate-spin" : ""} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleVerifyChain}
+            disabled={verifying}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-400 hover:bg-sky-500/20 transition-all disabled:opacity-50"
+          >
+            <ShieldIcon size={13} className={verifying ? "animate-spin" : ""} />
+            {verifying ? "Verifying..." : "Verify Hash Chain"}
+          </button>
+          <button
+            onClick={fetchEvents}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#1a2233] bg-[#0d111a] px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-[#121824] hover:text-slate-100 transition-colors disabled:opacity-50"
+          >
+            <RefreshIcon size={14} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </button>
+        </div>
       </div>
+
+      {/* Cryptographic Hash-Chain Verification Banner */}
+      {verifyReport && (
+        <div className={`rounded-xl border p-3.5 text-xs flex items-center justify-between ${
+          verifyReport.verified
+            ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-300"
+            : "border-rose-500/30 bg-rose-500/5 text-rose-300"
+        }`}>
+          <div className="flex items-center gap-2">
+            <span className={`h-2 w-2 rounded-full ${verifyReport.verified ? "bg-emerald-400 animate-pulse" : "bg-rose-400"}`} />
+            <span className="font-semibold">
+              {verifyReport.verified ? "Cryptographic Integrity Verified:" : "Integrity Failure:"}
+            </span>
+            <span className="text-slate-300">{verifyReport.details}</span>
+          </div>
+          <span className="font-mono text-[10px] text-slate-400">
+            {verifyReport.valid_records} valid records
+          </span>
+        </div>
+      )}
 
       {/* Filter Bar */}
       <form

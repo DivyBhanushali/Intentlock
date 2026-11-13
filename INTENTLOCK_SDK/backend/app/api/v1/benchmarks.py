@@ -120,3 +120,4 @@ def get_benchmark_run(
         )
 
     return run_record
+

@@ -96,3 +96,4 @@ def test_secure_langgraph_node_decorator(agent_with_graph_policy):
 
     assert out["result"] == "Executive Summary"
     assert out["_intentlock_status"] == "APPROVED"
+

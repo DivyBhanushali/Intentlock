@@ -121,3 +121,4 @@ Every database query in INTENTLOCK 2.0 is scoped strictly by `org_id` extracted 
 - Execution traces and provenance graphs are partitioned strictly by tenant.
 - Audit chains are maintained per organization.
 - Threat detections and security benchmarks are isolated per workspace.
+

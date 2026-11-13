@@ -117,3 +117,4 @@ INTENTLOCK 2.0 addresses the unique security risks introduced by autonomous and 
 - **T-25: Multi-Tenant Unauthorized Threat Dismissal**
   - *Vector*: Tenant A attempts to dismiss or alter threat intelligence alerts belonging to Tenant B.
   - *Mitigation*: Scoped database queries reject foreign tenant identifiers with HTTP 404 Not Found.
+

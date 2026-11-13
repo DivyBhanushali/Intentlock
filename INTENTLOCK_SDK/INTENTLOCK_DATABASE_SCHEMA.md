@@ -183,3 +183,4 @@ Historical records of the 25-vector adversarial benchmark suite.
 - `average_latency_ms` (FLOAT, DEFAULT 0.0).
 - `report_json` (JSON, DEFAULT {}): Detailed scenario results.
 - `created_at` (TIMESTAMP WITH TIME ZONE).
+

@@ -145,3 +145,4 @@ class ThreatDetector:
                 return threat_model
 
         return None
+

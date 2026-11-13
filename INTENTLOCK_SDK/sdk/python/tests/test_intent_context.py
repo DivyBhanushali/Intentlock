@@ -273,3 +273,4 @@ def test_intent_context_sensitivity_exceeded_denied(registry, broad_policy, engi
     decision = engine.evaluate(tc, broad_policy, registry, intent_context=intent)
     assert decision.verdict == DecisionVerdict.DENY
     assert decision.reason == "INTENT_SENSITIVITY_EXCEEDED"
+

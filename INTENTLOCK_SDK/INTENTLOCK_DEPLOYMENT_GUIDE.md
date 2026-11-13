@@ -140,3 +140,4 @@ For zero-downtime schema evolution:
 - **Health Probe**: `GET /health` $\rightarrow$ `{"status": "ok", "version": "2.0.0"}`.
 - **Audit Verification Probe**: `GET /api/v1/audit/verify` (requires JWT or API key) $\rightarrow$ verifies tamper-evident sequential hash chains.
 - **Threat Engine Summary**: `GET /api/v1/threats/stats` $\rightarrow$ real-time anomaly counts.
+

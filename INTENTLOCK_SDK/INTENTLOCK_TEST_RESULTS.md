@@ -49,3 +49,4 @@
 3. **Zero Token Replay**: An approved token cannot be used twice under any circumstance; secondary attempts raise HTTP 409 Conflict.
 4. **Parameter Binding**: Altering a single character in tool arguments after approval changes the SHA-256 canonical hash, invalidating the approval token.
 5. **Cryptographic Tamper Detection**: Any direct SQL mutation of historical audit records is detected by `/audit/verify`.
+

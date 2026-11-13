@@ -61,6 +61,8 @@ export interface AuditEvent {
   policy_id: string | null;
   action_hash: string | null;
   approval_id: string | null;
+  intent_id?: string | null;
+  trace_id?: string | null;
   risk_score: number;
   execution_success: boolean | null;
   execution_error: string | null;

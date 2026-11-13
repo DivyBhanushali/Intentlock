@@ -61,3 +61,4 @@ def test_list_and_get_latest_benchmarks(db_session):
     # Get specific run
     retrieved = get_benchmark_run(run_id=second_run.id, db=db_session, tenant=tenant)
     assert retrieved.id == second_run.id
+

@@ -197,3 +197,4 @@ agent.register_tool(
 result = agent.call_tool("add_numbers", a=10, b=25)
 print(f"Calculated: {result}")
 ```
+

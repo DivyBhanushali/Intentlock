@@ -174,3 +174,4 @@ Returns complete reconstructed causal evidence graph.
 - `GET /api/v1/audit/events`: Paginated query across immutable security events.
 - `GET /api/v1/audit/stats`: Aggregated event metrics for dashboard.
 - `GET /api/v1/audit/verify`: Traverses sequential SHA-256 hash chain and returns cryptographic integrity certificate (`verified: true/false`, valid count, corrupted count).
+

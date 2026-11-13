@@ -265,3 +265,4 @@ def get_trace_provenance_detail(
         timeline=timeline,
         causal_summary=" ".join(summary_parts),
     )
+

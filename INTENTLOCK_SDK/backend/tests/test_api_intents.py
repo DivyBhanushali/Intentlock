@@ -168,3 +168,4 @@ def test_intent_context_cross_tenant_isolation(test_db):
     resp = intercept_tool_call(request=cross_req, tenant=tenant_b, db=test_db)
     assert resp.verdict == DecisionVerdict.DENY
     assert resp.reason == "INTENT_CONTEXT_NOT_FOUND"
+

@@ -93,3 +93,4 @@ def test_provenance_trace_listing_and_detail(prov_db):
     ev1_node = next(n for n in detail.timeline if n.event_id == "ev_001")
     assert ev1_node.sanitized_metadata["api_key"] == "••••••• [REDACTED]"
     assert ev1_node.sanitized_metadata["query"] == "SELECT COUNT(*) FROM logs"
+

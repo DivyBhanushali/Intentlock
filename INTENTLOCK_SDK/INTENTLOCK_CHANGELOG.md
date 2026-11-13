@@ -73,3 +73,4 @@ INTENTLOCK 2.0 transforms the platform from a five-stage tool interceptor into a
 ### Backward Compatibility
 - **Zero Regressions**: 100% of legacy API routes, parameters, and models remain supported.
 - **Test Suite**: Expanded from 93 passing tests to **121 passing tests**.
+
