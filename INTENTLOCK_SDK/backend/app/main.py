@@ -13,9 +13,11 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 # Ensure app package and SDK are importable
@@ -30,13 +32,17 @@ if str(sdk_dir) not in sys.path:
 from app.core.config import settings
 from app.db.session import engine, Base, SessionLocal
 from app.db.models import PolicyModel, AgentModel
+from app.db.migrations import apply_migrations
 from app.api.v1.router import api_router
+
+logger = logging.getLogger("intentlock.server")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifecycle hook: initialize database tables and seed initial sample policy."""
+    """Lifecycle hook: initialize database tables, apply migrations, and seed initial sample policy."""
     Base.metadata.create_all(bind=engine)
+    apply_migrations(engine)
 
     # Seed default policy if none exists
     db = SessionLocal()
@@ -90,6 +96,42 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """
+    Top-level exception handler to ensure unhandled 500 errors do not expose
+    stack traces or internal exceptions to clients, while enforcing security headers.
+    """
+    logger.error(
+        f"Unhandled server error on {request.method} {request.url.path}: {exc}",
+        exc_info=True,
+    )
+    response = JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Enforce defense-in-depth HTTP security response headers across all responses."""
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        logger.error(f"Unhandled exception in request pipeline: {exc}", exc_info=True)
+        response = JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"},
+        )
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
 
 # Include API v1 router
 app.include_router(api_router, prefix=settings.API_V1_STR)
