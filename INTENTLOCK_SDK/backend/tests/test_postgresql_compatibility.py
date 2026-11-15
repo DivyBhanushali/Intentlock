@@ -136,3 +136,19 @@ def test_supabase_configured_connection_parameters():
     assert str(port) in normalized
     assert username in normalized
     assert "sslmode=require" in normalized
+
+
+def test_postgresql_engine_initializes_with_psycopg3_dialect():
+    """Verify SQLAlchemy initializes an engine using the psycopg (Psycopg 3) driver."""
+    from sqlalchemy import create_engine
+    fake_url = "postgresql://mock_user:mock_pass@localhost:5432/mock_db"
+    engine = create_engine(
+        fake_url,
+        pool_pre_ping=True,
+        pool_recycle=300,
+        pool_size=3,
+        max_overflow=2,
+        pool_timeout=30,
+    )
+    assert engine.dialect.name == "postgresql"
+    assert engine.dialect.driver == "psycopg"
