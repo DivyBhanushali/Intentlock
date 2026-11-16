@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from app.db.migrations import (
     apply_migrations,
     MigrationError,
+    APPLICATION_TABLES,
     _get_existing_columns,
     _get_existing_indexes,
     _validate_dialect,
@@ -27,6 +28,7 @@ def test_migration_fresh_database():
     # First run applies migration
     applied = apply_migrations(engine)
     assert "001_v2_enterprise_multitenancy_schema" in applied
+    assert "002_enable_supabase_rls_and_revoke_public_api_grants" in applied
 
     # Verify all newly required indexes exist on fresh database
     with engine.connect() as conn:
@@ -231,3 +233,144 @@ def test_migration_unsupported_dialect_fails_clearly():
 
     with pytest.raises(MigrationError, match="Unsupported database dialect 'oracle'"):
         _validate_dialect(FakeConnection())
+
+
+def test_migration_v2_covers_all_twelve_application_tables():
+    """Verify that APPLICATION_TABLES covers all 12 required tables."""
+    expected = {
+        "organizations",
+        "users",
+        "api_keys",
+        "policies",
+        "policy_versions",
+        "intent_contexts",
+        "approvals",
+        "audit_events",
+        "security_threat_events",
+        "benchmark_runs",
+        "agents",
+        "schema_migrations",
+    }
+    assert set(APPLICATION_TABLES) == expected
+    assert len(APPLICATION_TABLES) == 12
+
+
+def test_migration_v2_postgresql_rls_and_revoke_sql_execution(monkeypatch):
+    """
+    Verify that for PostgreSQL, Migration 2:
+    1. Enables standard RLS on all 12 application tables.
+    2. Never uses FORCE ROW LEVEL SECURITY.
+    3. Revokes anon, authenticated, and PUBLIC privileges on the 12 application tables.
+    4. Targets only table-associated sequences using pg_depend / pg_class catalog relationships.
+    5. Does not query broad information_schema.sequences or alter global schema default privileges.
+    6. Preserves service_role and postgres roles.
+    """
+    executed_statements = []
+
+    class FakeDialect:
+        name = "postgresql"
+
+    class FakeInspector:
+        def has_table(self, table_name):
+            return True
+
+    class FakeCursor:
+        def fetchone(self):
+            return None
+
+    class FakeConnection:
+        dialect = FakeDialect()
+
+        def execute(self, statement, parameters=None):
+            sql_str = str(statement)
+            executed_statements.append(sql_str)
+            return FakeCursor()
+
+    class FakeEngine:
+        def begin(self):
+            import contextlib
+            @contextlib.contextmanager
+            def _cm():
+                yield FakeConnection()
+            return _cm()
+
+    monkeypatch.setattr(sa, "inspect", lambda conn: FakeInspector())
+    monkeypatch.setattr("app.db.migrations._is_migration_applied", lambda conn, ver: False if ver == 2 else True)
+
+    applied = apply_migrations(FakeEngine())
+    assert "002_enable_supabase_rls_and_revoke_public_api_grants" in applied
+
+    all_sql = "\n".join(executed_statements)
+
+    # 1. Verify RLS and table revokes on all 12 application tables
+    for tbl in APPLICATION_TABLES:
+        assert f"ALTER TABLE {tbl} ENABLE ROW LEVEL SECURITY;" in all_sql
+        assert f"REVOKE ALL ON TABLE {tbl} FROM anon" in all_sql
+        assert f"REVOKE ALL ON TABLE {tbl} FROM authenticated" in all_sql
+        assert f"REVOKE ALL ON TABLE {tbl} FROM PUBLIC" in all_sql
+
+    # 2. Verify sequence permissions are scoped strictly to application tables via catalog relationships
+    assert "pg_depend" in all_sql
+    assert "pg_class" in all_sql
+    assert "pg_namespace" in all_sql
+    assert "pg_attribute" in all_sql
+    assert "d.deptype IN ('a', 'i')" in all_sql
+    assert "NOT a.attisdropped" in all_sql
+    assert "REVOKE ALL ON SEQUENCE public." in all_sql
+    assert "information_schema.sequences" not in all_sql
+
+    # 3. Verify global ALTER DEFAULT PRIVILEGES is intentionally omitted
+    assert "ALTER DEFAULT PRIVILEGES" not in all_sql
+
+    # 4. Strictly verify FORCE ROW LEVEL SECURITY is NEVER used
+    assert "FORCE ROW LEVEL SECURITY" not in all_sql
+
+    # 5. Verify service_role and postgres roles are untouched
+    assert "FROM service_role" not in all_sql
+    assert "FROM postgres" not in all_sql
+
+
+def test_migration_v2_service_role_is_never_revoked(monkeypatch):
+    """
+    Verify that Migration 2 never explicitly revokes privileges from `service_role`
+    either across table operations or sequence operations.
+    """
+    executed_statements = []
+
+    class FakeDialect:
+        name = "postgresql"
+
+    class FakeInspector:
+        def has_table(self, table_name):
+            return True
+
+    class FakeCursor:
+        def fetchone(self):
+            return None
+
+    class FakeConnection:
+        dialect = FakeDialect()
+
+        def execute(self, statement, parameters=None):
+            sql_str = str(statement)
+            executed_statements.append(sql_str)
+            return FakeCursor()
+
+    class FakeEngine:
+        def begin(self):
+            import contextlib
+            @contextlib.contextmanager
+            def _cm():
+                yield FakeConnection()
+            return _cm()
+
+    monkeypatch.setattr(sa, "inspect", lambda conn: FakeInspector())
+    monkeypatch.setattr("app.db.migrations._is_migration_applied", lambda conn, ver: False if ver == 2 else True)
+
+    apply_migrations(FakeEngine())
+
+    all_sql = "\n".join(executed_statements)
+    # Ensure no REVOKE statement targets service_role
+    for line in all_sql.splitlines():
+        if "REVOKE" in line:
+            assert "service_role" not in line

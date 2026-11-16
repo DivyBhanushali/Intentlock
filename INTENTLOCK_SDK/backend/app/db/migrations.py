@@ -17,6 +17,22 @@ logger = logging.getLogger("intentlock.migrations")
 
 SUPPORTED_DIALECTS: Set[str] = {"sqlite", "postgresql"}
 
+# Application tables governed by RLS and access hardening
+APPLICATION_TABLES: list[str] = [
+    "organizations",
+    "users",
+    "api_keys",
+    "policies",
+    "policy_versions",
+    "intent_contexts",
+    "approvals",
+    "audit_events",
+    "security_threat_events",
+    "benchmark_runs",
+    "agents",
+    "schema_migrations",
+]
+
 
 class MigrationError(RuntimeError):
     """Raised when a schema migration cannot complete safely."""
@@ -245,5 +261,98 @@ def apply_migrations(engine: Engine) -> list[str]:
             except Exception as exc:
                 logger.error(f"Failed to apply migration {m1_version} ({m1_name}): {exc}", exc_info=True)
                 raise MigrationError(f"Migration {m1_name} failed: {exc}") from exc
+
+        # ─── Migration 2: Supabase PostgreSQL RLS & Public API Access Hardening ───
+        m2_version = 2
+        m2_name = "002_enable_supabase_rls_and_revoke_public_api_grants"
+
+        if not _is_migration_applied(conn, m2_version):
+            logger.info(f"Applying migration {m2_version}: {m2_name} on {dialect}")
+            try:
+                if dialect == "postgresql":
+                    insp = sa.inspect(conn)
+                    for tbl in APPLICATION_TABLES:
+                        if insp.has_table(tbl):
+                            # 1. Enable RLS (standard non-forced RLS; owner/BYPASSRLS remains unaffected)
+                            conn.execute(sa.text(f"ALTER TABLE {tbl} ENABLE ROW LEVEL SECURITY;"))
+                            # 2. Revoke table-level access from PostgREST roles and PUBLIC
+                            conn.execute(sa.text(f"""
+                                DO $$
+                                BEGIN
+                                    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+                                        EXECUTE 'REVOKE ALL ON TABLE {tbl} FROM anon';
+                                    END IF;
+                                    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+                                        EXECUTE 'REVOKE ALL ON TABLE {tbl} FROM authenticated';
+                                    END IF;
+                                    EXECUTE 'REVOKE ALL ON TABLE {tbl} FROM PUBLIC';
+                                END $$;
+                            """))
+                            logger.info(f"Enabled RLS and revoked anon/authenticated/PUBLIC grants on '{tbl}'.")
+
+                    # ─── Service Role Privilege Preservation & PUBLIC Revocation Notice ───
+                    # Supabase provisions direct table and sequence grants to `service_role` upon
+                    # table creation. This migration never revokes privileges from `service_role`
+                    # and never restricts `service_role` access.
+                    #
+                    # Revoking privileges from the `PUBLIC` pseudo-role removes permissions that would
+                    # otherwise be inherited implicitly by all database roles through `PUBLIC`.
+                    # Any role (such as `service_role` or table owner `postgres`) holding explicit direct
+                    # GRANTs or role-level bypass attributes (e.g. rolbypassrls) retains full operational
+                    # access. No new grants are added to `service_role` here to maintain least-privilege hygiene.
+
+                    # 3. Revoke sequence privileges ONLY for sequences owned by or associated
+                    # with the 12 INTENTLOCK application tables via catalog dependencies (pg_depend).
+                    # Validates column attachment via pg_attribute (attnum = refobjsubid, not dropped).
+                    # Filters strictly by deptype IN ('a', 'i') (auto/serial and internal/identity).
+                    # Leaves unrelated Supabase / extension sequences in 'public' untouched.
+                    # Does not revoke from service_role or postgres.
+                    tables_list_sql = ", ".join(f"'{tbl}'" for tbl in APPLICATION_TABLES)
+                    conn.execute(sa.text(f"""
+                        DO $$
+                        DECLARE
+                            seq_record record;
+                        BEGIN
+                            FOR seq_record IN
+                                SELECT DISTINCT s.relname AS sequence_name
+                                FROM pg_class s
+                                JOIN pg_namespace sn ON sn.oid = s.relnamespace
+                                JOIN pg_depend d ON d.objid = s.oid
+                                                 AND d.classid = 'pg_class'::regclass
+                                                 AND d.refclassid = 'pg_class'::regclass
+                                JOIN pg_class t ON t.oid = d.refobjid
+                                JOIN pg_namespace tn ON tn.oid = t.relnamespace
+                                JOIN pg_attribute a ON a.attrelid = t.oid
+                                                   AND a.attnum = d.refobjsubid
+                                                   AND NOT a.attisdropped
+                                WHERE s.relkind = 'S'
+                                  AND d.deptype IN ('a', 'i')
+                                  AND sn.nspname = 'public'
+                                  AND tn.nspname = 'public'
+                                  AND t.relname = ANY(ARRAY[{tables_list_sql}])
+                            LOOP
+                                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+                                    EXECUTE 'REVOKE ALL ON SEQUENCE public.' || quote_ident(seq_record.sequence_name) || ' FROM anon';
+                                END IF;
+                                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+                                    EXECUTE 'REVOKE ALL ON SEQUENCE public.' || quote_ident(seq_record.sequence_name) || ' FROM authenticated';
+                                END IF;
+                                EXECUTE 'REVOKE ALL ON SEQUENCE public.' || quote_ident(seq_record.sequence_name) || ' FROM PUBLIC';
+                            END LOOP;
+                        END $$;
+                    """))
+                    logger.info("Revoked anon/authenticated/PUBLIC access on INTENTLOCK table-associated sequences.")
+
+                    # Note: Broad ALTER DEFAULT PRIVILEGES in public is intentionally omitted to avoid
+                    # altering global Supabase schema defaults. Future INTENTLOCK tables and their sequences
+                    # must receive explicit RLS and privilege hardening in their respective migrations.
+
+                _record_migration(conn, m2_version, m2_name)
+                applied.append(m2_name)
+                logger.info(f"Successfully applied migration {m2_version}: {m2_name}")
+            except Exception as exc:
+                logger.error(f"Failed to apply migration {m2_version} ({m2_name}): {exc}", exc_info=True)
+                raise MigrationError(f"Migration {m2_name} failed: {exc}") from exc
+
 
     return applied
