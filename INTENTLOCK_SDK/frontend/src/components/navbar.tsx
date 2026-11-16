@@ -17,7 +17,6 @@ import {
   LockIcon,
   TerminalIcon,
   ChevronDownIcon,
-  ExternalLinkIcon,
   SparklesIcon,
 } from "@/components/icons";
 
@@ -35,6 +34,7 @@ const primaryNav: NavItem[] = [
   { href: "/policies", label: "Policies", icon: DocumentIcon },
   { href: "/approvals", label: "Approvals", icon: ClockIcon },
   { href: "/audit", label: "Audit Ledger", icon: ListIcon },
+  { href: "/developers", label: "Developers", icon: TerminalIcon, badge: "Docs" },
 ];
 
 const secondaryTools = [
@@ -219,16 +219,18 @@ export function Navbar() {
             <span className="font-semibold text-[10px]">8-STAGE GUARD ACTIVE</span>
           </div>
 
-          {/* API Docs Button */}
-          <a
-            href="https://intentlock-backend-ze2i.onrender.com/docs"
-            target="_blank"
-            rel="noreferrer"
-            className="hidden sm:inline-flex items-center gap-1 rounded-md border border-slate-800 bg-slate-900/60 px-2 py-1 text-[11px] font-medium text-slate-400 hover:text-slate-200 hover:border-slate-700 transition-colors"
+          {/* Developer Portal Link */}
+          <Link
+            href="/developers"
+            className={`hidden sm:inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+              pathname.startsWith("/developers")
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 font-semibold shadow-xs"
+                : "border-slate-800 bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:border-slate-700"
+            }`}
           >
-            <span>API Docs</span>
-            <ExternalLinkIcon size={11} />
-          </a>
+            <TerminalIcon size={12} className={pathname.startsWith("/developers") ? "text-emerald-400" : "text-slate-400"} />
+            <span>Developers</span>
+          </Link>
 
           {/* Auth State / Profile */}
           {isAuthenticated && user ? (

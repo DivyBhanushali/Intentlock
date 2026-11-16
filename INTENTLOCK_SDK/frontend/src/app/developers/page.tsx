@@ -1,0 +1,487 @@
+// INTENTLOCK 2.0 – Production Developer Portal Landing Page
+import Link from "next/link";
+import { DeveloperLayout } from "@/components/developers/DeveloperLayout";
+import { CodeBlock } from "@/components/developers/CodeBlock";
+import { CodeTabs } from "@/components/developers/CodeTabs";
+import { Callout } from "@/components/developers/Callout";
+
+export default function DevelopersLandingPage() {
+  const breadcrumbs = [
+    { label: "Overview", href: "/developers" },
+  ];
+
+  const toc = [
+    { id: "hero", title: "Overview", level: 2 as const },
+    { id: "why-intentlock", title: "Why INTENTLOCK?", level: 2 as const },
+    { id: "how-it-works", title: "How INTENTLOCK Works", level: 2 as const },
+    { id: "core-capabilities", title: "Core Capabilities", level: 2 as const },
+    { id: "integration-pathways", title: "Choose Your Integration", level: 2 as const },
+    { id: "developer-resources", title: "Developer Resources", level: 2 as const },
+    { id: "getting-started-flow", title: "5-Step Onboarding Flow", level: 2 as const },
+  ];
+
+  const inProcessSdkCode = `from intentlock import SecureAgent, Policy
+
+# 1. Initialize SecureAgent with strict permission scopes
+agent = SecureAgent(
+    agent_id="support-agent-v1",
+    permissions=["file:read", "email:send"]
+)
+
+# 2. Register tools with permission bindings
+agent.register_tool(
+    name="read_customer_data",
+    handler=lambda file_path: open(file_path).read(),
+    permission="file:read",
+    description="Reads authorized customer files safely"
+)
+
+# 3. Intercept execution at the runtime boundary
+result = agent.execute(
+    tool_name="read_customer_data",
+    arguments={"file_path": "/data/customers/1042.json"},
+    user_request="Summarize account for user 1042"
+)
+print("Execution Result:", result)`;
+
+  const remoteGatewayCode = `from intentlock import IntentLockClient, DecisionVerdict
+
+# 1. Initialize gateway client with M2M machine key
+client = IntentLockClient(
+    api_key="ilk_live_your_api_key_here",
+    base_url="https://intentlock-backend-ze2i.onrender.com",
+    agent_id="support-agent-v1"
+)
+
+# 2. Request authorization decision from centralized gateway
+decision = client.intercept(
+    tool_name="send_refund_email",
+    arguments={"recipient": "user@example.com", "amount": 120.00},
+    user_request="Process partial refund for ticket #409"
+)
+
+# 3. Handle deterministic verdict
+if decision.verdict == DecisionVerdict.ALLOW:
+    # Safely proceed with tool execution
+    print("Action authorized. Hash:", decision.action_hash)
+elif decision.verdict == DecisionVerdict.REQUIRE_APPROVAL:
+    # Await human-in-the-loop review
+    print("Action paused for approval. Token ID:", decision.metadata.get("approval_id"))
+else:
+    # Abort tool invocation immediately
+    print(f"Action blocked by policy: {decision.reason}")`;
+
+  const curlCode = `curl -X POST "https://intentlock-backend-ze2i.onrender.com/api/v1/intercept" \\
+  -H "X-API-Key: ilk_live_your_api_key_here" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "agent_id": "support-agent-v1",
+    "tool_name": "read_customer_data",
+    "arguments": {
+      "file_path": "/data/customers/1042.json"
+    },
+    "user_request": "Summarize account for user 1042"
+  }'`;
+
+  const integrationTabs = [
+    { id: "in-process", label: "In-Process SDK (SecureAgent)", language: "python", code: inProcessSdkCode },
+    { id: "remote-gateway", label: "Remote Gateway (IntentLockClient)", language: "python", code: remoteGatewayCode },
+    { id: "curl", label: "Direct REST API (cURL)", language: "bash", code: curlCode },
+  ];
+
+  return (
+    <DeveloperLayout breadcrumbs={breadcrumbs} toc={toc}>
+      {/* ─── Hero Section ─── */}
+      <section id="hero" className="space-y-5">
+        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-mono font-semibold text-emerald-400">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span>DEVELOPER PORTAL · INTENTLOCK 2.0</span>
+        </div>
+
+        <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-100 sm:leading-[1.15]">
+          Secure your AI agents. <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">
+            At the execution boundary.
+          </span>
+        </h1>
+
+        <p className="text-base text-slate-300 leading-relaxed max-w-3xl">
+          INTENTLOCK is a deterministic security middleware and Python SDK that evaluates AI agent tool calls before execution, enforcing explicit authorization policies and human approval requirements.
+        </p>
+
+        {/* Primary Action Buttons */}
+        <div className="pt-2 flex flex-wrap items-center gap-3">
+          <Link
+            href="/developers/quickstart"
+            className="rounded-xl bg-emerald-400 px-5 py-2.5 text-xs font-bold text-slate-950 shadow-md shadow-emerald-500/10 transition-all hover:bg-emerald-300 hover:shadow-emerald-500/20"
+          >
+            Get Started &rarr;
+          </Link>
+
+          <Link
+            href="/developers/sdk"
+            className="rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-2.5 text-xs font-semibold text-slate-200 transition-all hover:border-slate-600 hover:bg-slate-800 hover:text-white"
+          >
+            Explore Python SDK
+          </Link>
+
+          <Link
+            href="/developers/api/reference"
+            className="rounded-xl border border-slate-800 bg-[#0a0e17] px-4 py-2.5 text-xs font-semibold text-slate-300 transition-all hover:border-slate-700 hover:text-slate-100"
+          >
+            API Reference
+          </Link>
+
+          <Link
+            href="/test"
+            className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-4 py-2.5 text-xs font-semibold text-indigo-300 transition-all hover:bg-indigo-500/20"
+          >
+            Security Playground
+          </Link>
+        </div>
+      </section>
+
+      {/* ─── Section A: Why INTENTLOCK? ─── */}
+      <section id="why-intentlock" className="mt-14 space-y-4">
+        <h2 className="text-xl font-bold tracking-tight text-slate-100 border-b border-slate-800 pb-2">
+          Why INTENTLOCK?
+        </h2>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          Autonomous AI agents interact with production systems by generating and executing tool calls: querying databases, reading private files, dispatching emails, and making external API requests.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+          <div className="rounded-xl border border-rose-500/20 bg-rose-950/10 p-4 space-y-2">
+            <div className="text-xs font-bold text-rose-400">The Problem: Non-Deterministic Execution</div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Prompt injections, indirect instruction poisoning, and multi-step reasoning failures can trick an LLM into calling destructive or unauthorized tools. Text-based guardrails and model self-reflection are probabilistic and easily bypassed.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-4 space-y-2">
+            <div className="text-xs font-bold text-emerald-400">The Solution: Deterministic Boundary Control</div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              INTENTLOCK inserts an immutable, code-level execution guard between the agent and its tools. Invocations are intercepted before invocation, evaluated against strict mathematical policies, and aborted instantly if unauthorized.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Section B: How INTENTLOCK Works ─── */}
+      <section id="how-it-works" className="mt-14 space-y-4">
+        <h2 className="text-xl font-bold tracking-tight text-slate-100 border-b border-slate-800 pb-2">
+          How INTENTLOCK Works
+        </h2>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          INTENTLOCK enforces security decisions through a 5-step lifecycle. Importantly, <strong>authorization is strictly decoupled from tool execution</strong>:
+        </p>
+
+        {/* Visual Lifecycle Pipeline */}
+        <div className="my-6 rounded-2xl border border-slate-800 bg-[#080b12] p-5 shadow-xl">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-center md:text-left text-xs">
+            <div className="rounded-xl border border-slate-800 bg-[#0d111a] p-3 flex-1 w-full">
+              <span className="font-mono text-[10px] text-slate-500 block">STEP 1</span>
+              <span className="font-bold text-slate-200">AI Agent</span>
+              <span className="text-[11px] text-slate-400 block mt-0.5">Plans action payload</span>
+            </div>
+
+            <span className="text-slate-600 font-mono hidden md:inline">&rarr;</span>
+
+            <div className="rounded-xl border border-slate-800 bg-[#0d111a] p-3 flex-1 w-full">
+              <span className="font-mono text-[10px] text-slate-500 block">STEP 2</span>
+              <span className="font-bold text-slate-200">Tool Call</span>
+              <span className="text-[11px] text-slate-400 block mt-0.5">Intercepted at boundary</span>
+            </div>
+
+            <span className="text-slate-600 font-mono hidden md:inline">&rarr;</span>
+
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-3 flex-1 w-full">
+              <span className="font-mono text-[10px] text-emerald-400 block">STEP 3</span>
+              <span className="font-bold text-emerald-300">INTENTLOCK Guard</span>
+              <span className="text-[11px] text-slate-300 block mt-0.5">Evaluates policy & intent</span>
+            </div>
+
+            <span className="text-slate-600 font-mono hidden md:inline">&rarr;</span>
+
+            <div className="rounded-xl border border-slate-800 bg-[#0d111a] p-3 flex-1 w-full">
+              <span className="font-mono text-[10px] text-slate-500 block">STEP 4</span>
+              <span className="font-bold text-slate-200">Verdict Decision</span>
+              <span className="text-[10px] font-mono text-emerald-400 block mt-0.5">ALLOW · DENY · APPROVE</span>
+            </div>
+
+            <span className="text-slate-600 font-mono hidden md:inline">&rarr;</span>
+
+            <div className="rounded-xl border border-slate-800 bg-[#0d111a] p-3 flex-1 w-full">
+              <span className="font-mono text-[10px] text-slate-500 block">STEP 5</span>
+              <span className="font-bold text-slate-200">Execution / Abort</span>
+              <span className="text-[11px] text-slate-400 block mt-0.5">Action executed or aborted</span>
+            </div>
+          </div>
+        </div>
+
+        <Callout type="warning" title="Separation of Concerns">
+          INTENTLOCK does not execute untrusted tools directly inside its policy engine. It acts as an authorization authority: returning a cryptographic verdict and action hash, allowing your application runtime to abort execution if permissions are violated.
+        </Callout>
+      </section>
+
+      {/* ─── Section C: Core Capabilities ─── */}
+      <section id="core-capabilities" className="mt-14 space-y-4">
+        <h2 className="text-xl font-bold tracking-tight text-slate-100 border-b border-slate-800 pb-2">
+          Core Capabilities (Verified by Tests)
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 mt-3">
+          {[
+            {
+              title: "Execution-Boundary Enforcement",
+              desc: "Wraps callable handlers at the runtime interface so unauthorized actions cannot invoke real system APIs.",
+              tag: "Core",
+            },
+            {
+              title: "Deterministic Policy Evaluation",
+              desc: "Evaluates explicit allow/deny sets, sensitivity limits, and glob resource paths with zero model hallucination.",
+              tag: "Deterministic",
+            },
+            {
+              title: "Task-Scoped Intent Contexts",
+              desc: "Time-limited cryptographic tokens restricting an agent's authority strictly to an approved objective.",
+              tag: "Intent IAM",
+            },
+            {
+              title: "Human-in-the-Loop Approvals",
+              desc: "Requires explicit operator confirmation for high-risk operations with nonce verification against token replay.",
+              tag: "Governance",
+            },
+            {
+              title: "Tamper-Evident Audit Ledger",
+              desc: "SHA-256 hash-chained event records that can be cryptographically verified to guarantee audit integrity.",
+              tag: "Audit",
+            },
+            {
+              title: "Python SDK (intentlock-sdk)",
+              desc: "Ergonomic, lightweight Python package (Python >= 3.12, Pydantic v2) for in-process or remote gateway usage.",
+              tag: "SDK",
+            },
+            {
+              title: "REST API Gateway",
+              desc: "FastAPI-powered enterprise gateway providing 42 REST endpoints with multi-tenant RBAC and M2M API keys.",
+              tag: "REST API",
+            },
+            {
+              title: "LangChain & LangGraph Integrations",
+              desc: "SecureTool and SecureGraphNode wrappers enabling drop-in protection for popular agent orchestration frameworks.",
+              tag: "Integrations",
+            },
+            {
+              title: "Model Context Protocol (MCP) Proxy",
+              desc: "MCPSecurityProxy inspecting JSON-RPC tool lists and call requests across external MCP server connections.",
+              tag: "MCP",
+            },
+          ].map((cap, i) => (
+            <div key={i} className="rounded-xl border border-slate-800 bg-[#0a0e17] p-4 space-y-2 hover:border-slate-700 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-xs text-slate-100">{cap.title}</span>
+                <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[9px] font-mono text-emerald-400 border border-slate-700">
+                  {cap.tag}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">{cap.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── Section D: Choose Your Integration ─── */}
+      <section id="integration-pathways" className="mt-14 space-y-4">
+        <h2 className="text-xl font-bold tracking-tight text-slate-100 border-b border-slate-800 pb-2">
+          Choose Your Integration
+        </h2>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          INTENTLOCK provides two complementary operational models. Select the approach best suited to your deployment architecture:
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+          <div className="rounded-xl border border-slate-800 bg-[#0a0e17] p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-sm text-slate-100">In-Process SDK</h3>
+              <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-mono text-emerald-400 font-semibold">
+                Local Guardrails
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Uses <code className="text-emerald-400 font-mono">SecureAgent</code> to wrap tools directly inside your Python application process. Evaluates policies in-memory with sub-millisecond latency and zero external network calls.
+            </p>
+            <ul className="text-xs text-slate-400 space-y-1.5 pt-1">
+              <li className="flex items-center gap-2">
+                <span className="text-emerald-400">&check;</span> Zero network overhead
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-emerald-400">&check;</span> Direct callable tool registration
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-emerald-400">&check;</span> Ideal for microservices, CLI agents, and air-gapped jobs
+              </li>
+            </ul>
+            <div className="pt-2">
+              <Link href="/developers/sdk" className="text-xs text-emerald-400 hover:underline font-medium">
+                View Python SDK Guide &rarr;
+              </Link>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-800 bg-[#0a0e17] p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-sm text-slate-100">Remote Gateway Client</h3>
+              <span className="rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-[10px] font-mono text-sky-400 font-semibold">
+                Centralized Governance
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Uses <code className="text-sky-400 font-mono">IntentLockClient</code> to query the centralized FastAPI backend over HTTPS using machine-to-machine API keys (<code className="text-slate-200 font-mono">ilk_live_...</code>).
+            </p>
+            <ul className="text-xs text-slate-400 space-y-1.5 pt-1">
+              <li className="flex items-center gap-2">
+                <span className="text-sky-400">&check;</span> Organization-wide declarative policies
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-sky-400">&check;</span> Cross-service Intent Authorization Contexts
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-sky-400">&check;</span> Centralized audit ledger and live SOC telemetry
+              </li>
+            </ul>
+            <div className="pt-2">
+              <Link href="/developers/api" className="text-xs text-sky-400 hover:underline font-medium">
+                View REST API Guide &rarr;
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <CodeTabs tabs={integrationTabs} defaultTabId="in-process" />
+        </div>
+      </section>
+
+      {/* ─── Section E: Developer Resources ─── */}
+      <section id="developer-resources" className="mt-14 space-y-4">
+        <h2 className="text-xl font-bold tracking-tight text-slate-100 border-b border-slate-800 pb-2">
+          Developer Resources
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 mt-3">
+          {[
+            {
+              title: "5-Minute Quickstart",
+              href: "/developers/quickstart",
+              desc: "Step-by-step tutorial to protect your first Python agent tool.",
+              badge: "Tutorial",
+            },
+            {
+              title: "Python SDK Reference",
+              href: "/developers/sdk",
+              desc: "Class methods, parameters, return types, and lifecycle exceptions.",
+              badge: "SDK v0.1.0",
+            },
+            {
+              title: "REST Endpoints Reference",
+              href: "/developers/api/reference",
+              desc: "Interactive catalog of all 42 REST API endpoints with request schemas.",
+              badge: "OpenAPI",
+            },
+            {
+              title: "Security & Threat Model",
+              href: "/developers/security",
+              desc: "Detailed threat vectors, SHA-256 audit chaining, and least-privilege IAM.",
+              badge: "Security",
+            },
+            {
+              title: "Ecosystem Integrations",
+              href: "/developers/sdk/tool-protection",
+              desc: "Guides for LangChain SecureTool, LangGraph nodes, and MCP security proxies.",
+              badge: "Frameworks",
+            },
+            {
+              title: "Interactive Playground",
+              href: "/test",
+              desc: "Simulate live tool calls, payload attacks, and approval triggers in your browser.",
+              badge: "Live Test",
+            },
+          ].map((res, i) => (
+            <Link
+              key={i}
+              href={res.href}
+              className="group rounded-xl border border-slate-800 bg-[#0a0e17] p-4 transition-all hover:border-slate-700 hover:bg-slate-900/60"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-xs text-slate-200 group-hover:text-emerald-400 transition-colors">
+                  {res.title}
+                </span>
+                <span className="text-[10px] font-mono text-slate-500 group-hover:text-slate-400">
+                  {res.badge}
+                </span>
+              </div>
+              <p className="mt-1.5 text-[11px] text-slate-400 leading-relaxed">{res.desc}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── Section F: Getting Started Flow ─── */}
+      <section id="getting-started-flow" className="mt-14 space-y-4">
+        <h2 className="text-xl font-bold tracking-tight text-slate-100 border-b border-slate-800 pb-2">
+          5-Step Developer Onboarding Flow
+        </h2>
+        <div className="space-y-3 mt-3 text-xs">
+          <div className="flex items-start gap-3 rounded-xl border border-slate-800 bg-[#0a0e17] p-4">
+            <span className="rounded bg-emerald-500/10 px-2 py-1 font-mono font-bold text-emerald-400 text-xs">01</span>
+            <div className="space-y-1">
+              <div className="font-semibold text-slate-200">Install the Python SDK</div>
+              <p className="text-slate-400 text-[11px]">Install the lightweight <code className="text-emerald-400 font-mono">intentlock-sdk</code> directly from the repository into your Python &ge; 3.12 environment:</p>
+              <CodeBlock code="pip install git+https://github.com/DivyBhanushali/Intentlock.git#subdirectory=INTENTLOCK_SDK/sdk/python" language="bash" />
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 rounded-xl border border-slate-800 bg-[#0a0e17] p-4">
+            <span className="rounded bg-emerald-500/10 px-2 py-1 font-mono font-bold text-emerald-400 text-xs">02</span>
+            <div className="space-y-1">
+              <div className="font-semibold text-slate-200">Configure Security Policies</div>
+              <p className="text-slate-400 text-[11px]">Define permitted permissions, disallowed dangerous actions, sensitivity thresholds, and required human approvals.</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 rounded-xl border border-slate-800 bg-[#0a0e17] p-4">
+            <span className="rounded bg-emerald-500/10 px-2 py-1 font-mono font-bold text-emerald-400 text-xs">03</span>
+            <div className="space-y-1">
+              <div className="font-semibold text-slate-200">Protect Your Agent Tools</div>
+              <p className="text-slate-400 text-[11px]">Wrap Python functions with <code className="text-slate-300 font-mono">agent.register_tool()</code> or LangChain tools with <code className="text-slate-300 font-mono">SecureTool()</code>.</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 rounded-xl border border-slate-800 bg-[#0a0e17] p-4">
+            <span className="rounded bg-emerald-500/10 px-2 py-1 font-mono font-bold text-emerald-400 text-xs">04</span>
+            <div className="space-y-1">
+              <div className="font-semibold text-slate-200">Evaluate Interception Decisions</div>
+              <p className="text-slate-400 text-[11px]">Handle deterministic verdicts (<code className="text-emerald-400 font-mono">ALLOW</code>, <code className="text-rose-400 font-mono">DENY</code>, <code className="text-amber-400 font-mono">REQUIRE_APPROVAL</code>) before executing any real system code.</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 rounded-xl border border-slate-800 bg-[#0a0e17] p-4">
+            <span className="rounded bg-emerald-500/10 px-2 py-1 font-mono font-bold text-emerald-400 text-xs">05</span>
+            <div className="space-y-1">
+              <div className="font-semibold text-slate-200">Inspect Cryptographic Audit Trail</div>
+              <p className="text-slate-400 text-[11px]">Review tamper-evident SHA-256 chained audit logs in the local log or via the centralized Audit Ledger endpoint.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-4 flex justify-between items-center border-t border-slate-800">
+          <span className="text-xs text-slate-500">Ready to begin?</span>
+          <Link
+            href="/developers/quickstart"
+            className="rounded-lg bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 transition-colors"
+          >
+            Start with Quickstart &rarr;
+          </Link>
+        </div>
+      </section>
+    </DeveloperLayout>
+  );
+}
