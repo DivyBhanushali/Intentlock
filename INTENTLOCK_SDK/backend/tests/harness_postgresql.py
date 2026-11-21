@@ -63,18 +63,44 @@ class TestPostgreSQLRLSEngineEnforcement:
         with pg_app_engine.connect() as conn:
             with pytest.raises(sa.exc.DBAPIError) as exc_info:
                 conn.execute(sa.text("CREATE TABLE public.unauthorized_probe (id int)"))
-            assert "permission denied" in str(exc_info.value).lower()
+            err_msg = str(exc_info.value).lower()
+            sqlstate = getattr(getattr(exc_info.value, "orig", None), "sqlstate", None) or getattr(getattr(exc_info.value, "orig", None), "pgcode", None)
+            assert (
+                sqlstate == "42501"
+                or "permission denied" in err_msg
+                or "insufficientprivilege" in err_msg
+            )
+            conn.rollback()
 
     def test_sictack_app_cannot_drop_or_truncate_tables(self, pg_app_engine):
         """Runtime role sictack_app must be strictly forbidden from dropping or truncating tables."""
+        # 1. DROP TABLE probe on fresh connection
         with pg_app_engine.connect() as conn:
             with pytest.raises(sa.exc.DBAPIError) as exc_info:
                 conn.execute(sa.text("DROP TABLE public.policies"))
-            assert "permission denied" in str(exc_info.value).lower()
+            err_msg = str(exc_info.value).lower()
+            sqlstate = getattr(getattr(exc_info.value, "orig", None), "sqlstate", None) or getattr(getattr(exc_info.value, "orig", None), "pgcode", None)
+            assert (
+                sqlstate == "42501"
+                or "permission denied" in err_msg
+                or "must be owner" in err_msg
+                or "insufficientprivilege" in err_msg
+            )
+            conn.rollback()
 
+        # 2. TRUNCATE TABLE probe on fresh connection
+        with pg_app_engine.connect() as conn:
             with pytest.raises(sa.exc.DBAPIError) as exc_info:
                 conn.execute(sa.text("TRUNCATE TABLE public.policies"))
-            assert "permission denied" in str(exc_info.value).lower()
+            err_msg = str(exc_info.value).lower()
+            sqlstate = getattr(getattr(exc_info.value, "orig", None), "sqlstate", None) or getattr(getattr(exc_info.value, "orig", None), "pgcode", None)
+            assert (
+                sqlstate == "42501"
+                or "permission denied" in err_msg
+                or "must be owner" in err_msg
+                or "insufficientprivilege" in err_msg
+            )
+            conn.rollback()
 
     def test_missing_tenant_context_returns_zero_rows(self, pg_app_engine):
         """Unauthenticated / context-free connection must return 0 rows under RLS."""
@@ -86,15 +112,17 @@ class TestPostgreSQLRLSEngineEnforcement:
         """Tenants must never read or write records belonging to other organizations."""
         org_a = f"org_{uuid.uuid4().hex[:8]}"
         org_b = f"org_{uuid.uuid4().hex[:8]}"
+        slug_a = f"slug-{org_a}"
+        slug_b = f"slug-{org_b}"
         pol_id = f"pol_{uuid.uuid4().hex[:8]}"
 
         # Seed parent organization records first to preserve foreign-key integrity
         with pg_admin_engine.connect() as conn:
             conn.execute(sa.text("""
-                INSERT INTO organizations (id, name, status)
-                VALUES (:org_a, 'Org Alpha', 'ACTIVE'), (:org_b, 'Org Beta', 'ACTIVE')
+                INSERT INTO organizations (id, name, slug, status)
+                VALUES (:org_a, 'Org Alpha', :slug_a, 'ACTIVE'), (:org_b, 'Org Beta', :slug_b, 'ACTIVE')
                 ON CONFLICT (id) DO NOTHING;
-            """), {"org_a": org_a, "org_b": org_b})
+            """), {"org_a": org_a, "org_b": org_b, "slug_a": slug_a, "slug_b": slug_b})
             conn.execute(sa.text("""
                 INSERT INTO policies (id, org_id, name, description, is_active, max_risk_level, version)
                 VALUES (:id, :org_id, 'Policy A', 'Test', true, 'MEDIUM', 1)
@@ -120,15 +148,16 @@ class TestPostgreSQLRLSEngineEnforcement:
         """
         key_id = f"key_{uuid.uuid4().hex[:8]}"
         org_id = f"org_{uuid.uuid4().hex[:8]}"
+        slug = f"slug-{org_id}"
         key_hash = f"hash_{uuid.uuid4().hex[:32]}"
 
         # Seed parent organization first to satisfy foreign-key constraint
         with pg_admin_engine.connect() as conn:
             conn.execute(sa.text("""
-                INSERT INTO organizations (id, name, status)
-                VALUES (:org_id, 'Bootstrap Test Org', 'ACTIVE')
+                INSERT INTO organizations (id, name, slug, status)
+                VALUES (:org_id, 'Bootstrap Test Org', :slug, 'ACTIVE')
                 ON CONFLICT (id) DO NOTHING;
-            """), {"org_id": org_id})
+            """), {"org_id": org_id, "slug": slug})
             conn.execute(sa.text("""
                 INSERT INTO api_keys (id, org_id, name, key_prefix, key_hash, is_active, scopes)
                 VALUES (:id, :org_id, 'Test Key', 'sictack_live_', :hash, true, '["agent:read", "policy:evaluate"]')
@@ -153,16 +182,17 @@ class TestPostgreSQLRLSEngineEnforcement:
     def test_revoked_and_inactive_api_key_detection(self, pg_app_engine, pg_admin_engine):
         """Verify sictack_resolve_api_key accurately exposes revoked_at and inactive flags."""
         org_id = f"org_rev_{uuid.uuid4().hex[:8]}"
+        slug = f"slug-{org_id}"
         rev_key_id = f"key_rev_{uuid.uuid4().hex[:8]}"
         rev_key_hash = f"hash_rev_{uuid.uuid4().hex[:32]}"
         now = datetime.now(timezone.utc)
 
         with pg_admin_engine.connect() as conn:
             conn.execute(sa.text("""
-                INSERT INTO organizations (id, name, status)
-                VALUES (:org_id, 'Revocation Test Org', 'ACTIVE')
+                INSERT INTO organizations (id, name, slug, status)
+                VALUES (:org_id, 'Revocation Test Org', :slug, 'ACTIVE')
                 ON CONFLICT (id) DO NOTHING;
-            """), {"org_id": org_id})
+            """), {"org_id": org_id, "slug": slug})
             conn.execute(sa.text("""
                 INSERT INTO api_keys (id, org_id, name, key_prefix, key_hash, is_active, revoked_at, scopes)
                 VALUES (:id, :org_id, 'Revoked Key', 'sictack_rev_', :hash, false, :revoked_at, '["agent:read"]')
@@ -241,13 +271,16 @@ class TestPostgreSQLRLSEngineEnforcement:
         ver_a1 = f"ver_a1_{uuid.uuid4().hex[:8]}"
         ver_b1 = f"ver_b1_{uuid.uuid4().hex[:8]}"
 
+        slug_a = f"slug-{org_a}"
+        slug_b = f"slug-{org_b}"
+
         # Admin seeds parent organizations, policies, and policy_versions
         with pg_admin_engine.connect() as conn:
             conn.execute(sa.text("""
-                INSERT INTO organizations (id, name, status)
-                VALUES (:org_a, 'Org Alpha', 'ACTIVE'), (:org_b, 'Org Beta', 'ACTIVE')
+                INSERT INTO organizations (id, name, slug, status)
+                VALUES (:org_a, 'Org Alpha', :slug_a, 'ACTIVE'), (:org_b, 'Org Beta', :slug_b, 'ACTIVE')
                 ON CONFLICT (id) DO NOTHING;
-            """), {"org_a": org_a, "org_b": org_b})
+            """), {"org_a": org_a, "org_b": org_b, "slug_a": slug_a, "slug_b": slug_b})
             conn.execute(sa.text("""
                 INSERT INTO policies (id, org_id, name, description, is_active, max_risk_level, version)
                 VALUES (:pol_a, :org_a, 'Policy Alpha', 'Policy A', true, 'MEDIUM', 1),
@@ -276,6 +309,7 @@ class TestPostgreSQLRLSEngineEnforcement:
                     VALUES (:id, :pol_a, 2, 'Unauthorized Version', 'Attacker Probe')
                 """), {"id": probe_id, "pol_a": pol_a})
             assert "row-level security" in str(exc_info.value).lower()
+            conn.rollback()
 
         # 3. Missing tenant context -> 0 rows and forbidden insert
         with pg_app_engine.connect() as conn:
@@ -289,6 +323,7 @@ class TestPostgreSQLRLSEngineEnforcement:
                     VALUES (:id, :pol_a, 3, 'No Context Version', 'Probe')
                 """), {"id": probe_id2, "pol_a": pol_a})
             assert "row-level security" in str(exc_info.value).lower()
+            conn.rollback()
 
         # 4. Tenant A querying Policy A versions -> exactly 1 row (ver_a1)
         with pg_app_engine.connect() as conn:

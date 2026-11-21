@@ -193,9 +193,16 @@ class TestDistributedRedisClusterHarness:
         from app.main import app
         from app.db.session import engine, SessionLocal
         from app.db.models import Base, OrganizationModel, ApiKeyModel
+        from app.db.migrations import apply_migrations
+        from sqlalchemy import inspect
 
-        # Ensure database tables exist in the test environment
+        # Ensure database tables exist and full migration chain is applied
         Base.metadata.create_all(bind=engine)
+        apply_migrations(engine)
+
+        inspector = inspect(engine)
+        audit_cols = [col["name"] for col in inspector.get_columns("audit_events")]
+        assert "org_id" in audit_cols, "audit_events.org_id column must exist after migrations"
 
         backend = RedisStateSyncBackend(redis_url=REDIS_TEST_URL)
         set_state_sync_coordinator(backend)
