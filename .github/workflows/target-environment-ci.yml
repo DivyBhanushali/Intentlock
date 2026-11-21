@@ -66,8 +66,8 @@ jobs:
           # 2. Execute full migration chain 001 through 007 as schema owner (sictack_admin)
           python -c "
           from app.db.session import engine
-          from app.db.migrations import run_migrations
-          applied = run_migrations(engine)
+          from app.db.migrations import apply_migrations
+          applied = apply_migrations(engine)
           print('Successfully applied migrations:', applied)
           "
 
