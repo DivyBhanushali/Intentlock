@@ -17,12 +17,16 @@ from app.db.models import (
     ApprovalModel,
     AuditEventModel,
     IntentContextModel,
+    OrganizationModel,
     PolicyModel,
+    SentinelTaskSessionModel,
+    SentinelBehavioralEventModel,
 )
 from app.schemas.schemas import InterceptRequest, InterceptResponse
 from app.core.config import settings
 from app.core.audit_chain import append_audit_event
 from app.core.threat_engine import ThreatDetector
+from sictack.coordination.state_sync import get_state_sync_coordinator
 
 from intentlock.models import (
     ApprovalStatus,
@@ -36,6 +40,7 @@ from intentlock.models import (
 from intentlock.policy_engine import PolicyEngine
 from intentlock.risk_engine import RiskEngine
 from intentlock.registry import ToolRegistry
+from intentlock.sentinel.collector import redact_sensitive_data
 
 router = APIRouter(prefix="/intercept", tags=["Security Gateway"])
 
@@ -55,6 +60,8 @@ def _build_sdk_policy(db_policy: PolicyModel) -> Policy:
         allowed_recipients=db_policy.allowed_recipients or [],
         max_risk_level=RiskLevel(db_policy.max_risk_level),
         max_sensitivity=db_policy.max_sensitivity,
+        version=getattr(db_policy, "version", 1) or 1,
+        parameter_constraints=getattr(db_policy, "parameter_constraints", {}) or {},
         description=db_policy.description or "",
     )
 
@@ -87,7 +94,7 @@ def _build_sdk_intent(db_intent: IntentContextModel) -> IntentContext:
 def intercept_tool_call(
     request: InterceptRequest,
     db: Session = Depends(get_db),
-    tenant: Optional[TenantContext] = Depends(get_current_tenant),
+    tenant: TenantContext = Depends(get_current_tenant),
 ):
     """
     Authoritative enforcement endpoint implementing INTENTLOCK 2.0 8-stage pipeline:
@@ -101,20 +108,94 @@ def intercept_tool_call(
     8. Tamper-Evident Audit Recording
     """
     if tenant is None or not isinstance(tenant, TenantContext):
-        tenant = TenantContext(org_id="default-org", org_name="Default Organization", plan="ENTERPRISE")
-
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required. Please provide a valid Bearer JWT session token or X-API-Key.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     now = datetime.now(timezone.utc)
     trace_id = request.trace_id or str(uuid.uuid4())
+    coordinator = get_state_sync_coordinator()
 
+    # Replay protection via distributed nonce registration
+    if getattr(request, "nonce", None):
+        if not coordinator.register_nonce(request.nonce):
+            act_hash = ToolCall(tool_name=request.tool_name, agent_id=request.agent_id).canonical_hash()
+            return InterceptResponse(
+                verdict=DecisionVerdict.DENY,
+                allowed=False,
+                reason="REPLAY_DETECTED: Action nonce has already been consumed or duplicated",
+                decision_id=str(uuid.uuid4()),
+                action_hash=act_hash,
+                risk_level=RiskLevel.CRITICAL,
+                policy_id="",
+                requires_approval=False,
+                trace_id=trace_id,
+            )
 
-    # 1. Update agent last_active timestamp if registered
+    # 0. Entitlement & Quota Enforcement (Atomic, Concurrency-Safe, Fail Closed)
+    org = db.query(OrganizationModel).filter(OrganizationModel.id == tenant.org_id).first()
+    if org and getattr(org, "status", "ACTIVE") != "ACTIVE":
+        act_hash = ToolCall(tool_name=request.tool_name, agent_id=request.agent_id).canonical_hash()
+        return InterceptResponse(
+            verdict=DecisionVerdict.DENY,
+            allowed=False,
+            reason=f"TENANT_SUSPENDED: Organization status is {org.status}",
+            decision_id=str(uuid.uuid4()),
+            action_hash=act_hash,
+            risk_level=RiskLevel.CRITICAL,
+            policy_id="",
+            requires_approval=False,
+            trace_id=trace_id,
+        )
+
+    max_monthly = org.max_monthly_actions if org and org.max_monthly_actions else 100000
+    thirty_days_ago = now - timedelta(days=30)
+    current_monthly_count = (
+        db.query(AuditEventModel)
+        .filter(
+            AuditEventModel.org_id == tenant.org_id,
+            AuditEventModel.timestamp >= thirty_days_ago,
+        )
+        .count()
+    )
+    is_allowed, current_sync, limit = coordinator.consume_quota(tenant.org_id, max_monthly)
+    if current_monthly_count >= max_monthly or not is_allowed:
+        act_hash = ToolCall(tool_name=request.tool_name, agent_id=request.agent_id).canonical_hash()
+        return InterceptResponse(
+            verdict=DecisionVerdict.DENY,
+            allowed=False,
+            reason="QUOTA_EXCEEDED: Monthly action entitlement exhausted",
+            decision_id=str(uuid.uuid4()),
+            action_hash=act_hash,
+            risk_level=RiskLevel.CRITICAL,
+            policy_id="",
+            requires_approval=False,
+            trace_id=trace_id,
+        )
+
+    # 1. Update agent last_active timestamp if registered and verify agent status
     agent = (
         db.query(AgentModel)
         .filter(AgentModel.id == request.agent_id, AgentModel.org_id == tenant.org_id)
         .first()
     )
     if agent:
+        agent_status = getattr(agent, "status", "ACTIVE") or "ACTIVE"
+        if agent_status.upper() in ("SUSPENDED", "DECOMMISSIONED"):
+            act_hash = ToolCall(tool_name=request.tool_name, agent_id=request.agent_id).canonical_hash()
+            return InterceptResponse(
+                verdict=DecisionVerdict.DENY,
+                allowed=False,
+                reason=f"AGENT_{agent_status.upper()}: Agent is not in active operational state",
+                decision_id=str(uuid.uuid4()),
+                action_hash=act_hash,
+                risk_level=RiskLevel.CRITICAL,
+                policy_id=agent.policy_id or "",
+                requires_approval=False,
+                trace_id=trace_id,
+            )
         agent.last_active_at = now
         db.commit()
 
@@ -179,6 +260,210 @@ def intercept_tool_call(
             )
         sdk_intent = _build_sdk_intent(db_intent)
 
+    # 2b. SENTINEL Task Session Enforcement (Phase 1B/1C)
+    sentinel_session = None
+    if request.session_id:
+        sentinel_session = (
+            db.query(SentinelTaskSessionModel)
+            .filter(
+                SentinelTaskSessionModel.id == request.session_id,
+                SentinelTaskSessionModel.org_id == tenant.org_id,
+            )
+            .first()
+        )
+        if not sentinel_session:
+            # Session specified but not found in tenant -> Fail closed DENY
+            action_hash = ToolCall(
+                tool_name=request.tool_name,
+                agent_id=request.agent_id,
+                intent_id=request.intent_id or "",
+            ).canonical_hash()
+
+            audit = append_audit_event(
+                db=db,
+                org_id=tenant.org_id,
+                agent_id=request.agent_id,
+                tool_name=request.tool_name,
+                verdict=DecisionVerdict.DENY.value,
+                reason="SENTINEL_SESSION_NOT_FOUND_FOR_TENANT",
+                policy_id="",
+                action_hash=action_hash,
+                trace_id=trace_id,
+                intent_id=request.intent_id or "",
+                risk_score=1.0,
+                execution_success=False,
+                execution_error=f"Task session '{request.session_id}' not found for tenant '{tenant.org_id}'",
+                timestamp=now,
+            )
+            db.commit()
+
+            return InterceptResponse(
+                verdict=DecisionVerdict.DENY,
+                allowed=False,
+                reason="SENTINEL_SESSION_NOT_FOUND_FOR_TENANT",
+                decision_id=str(uuid.uuid4()),
+                action_hash=action_hash,
+                risk_score=1.0,
+                risk_level=RiskLevel.CRITICAL,
+                session_id=request.session_id,
+                intent_id=request.intent_id,
+                trace_id=trace_id,
+            )
+
+        # Check session suspension state
+        if sentinel_session.session_state == "SUSPENDED":
+            sentinel_session.blocked_executions = (sentinel_session.blocked_executions or 0) + 1
+            sentinel_session.scope_violations = (sentinel_session.scope_violations or 0) + 1
+            sentinel_session.updated_at = now
+
+            suspension_event = SentinelBehavioralEventModel(
+                id=f"bev_{uuid.uuid4().hex[:16]}",
+                org_id=tenant.org_id,
+                session_id=sentinel_session.id,
+                correlation_id=trace_id,
+                event_type="SCOPE_VIOLATION",
+                tool_name=request.tool_name,
+                resource_id=request.resource_id,
+                verdict="DENY",
+                execution_success=False,
+                execution_error=f"Execution blocked: session is suspended ({sentinel_session.suspension_reason})",
+                step_index=len(sentinel_session.events) + 1,
+                event_payload={"suspension_reason": sentinel_session.suspension_reason},
+                timestamp=now,
+            )
+            db.add(suspension_event)
+            db.add(sentinel_session)
+            db.commit()
+
+            action_hash = ToolCall(
+                tool_name=request.tool_name,
+                agent_id=request.agent_id,
+                intent_id=request.intent_id or "",
+            ).canonical_hash()
+
+            ThreatDetector.inspect_and_record(
+                db=db,
+                org_id=tenant.org_id,
+                agent_id=request.agent_id,
+                verdict="DENY",
+                reason="SESSION_SUSPENDED_EXECUTION_BLOCKED",
+                trace_id=trace_id,
+                tool_name=request.tool_name,
+                now=now,
+            )
+
+            return InterceptResponse(
+                verdict=DecisionVerdict.DENY,
+                allowed=False,
+                reason=f"Session is suspended: execution blocked at boundary ({sentinel_session.suspension_reason or 'Policy suspension'})",
+                decision_id=str(uuid.uuid4()),
+                action_hash=action_hash,
+                risk_score=1.0,
+                risk_level=RiskLevel.CRITICAL,
+                session_id=request.session_id,
+                intent_id=request.intent_id,
+                trace_id=trace_id,
+            )
+
+        # Check terminal state
+        if sentinel_session.session_state in {"COMPLETED", "FAILED", "TERMINATED"}:
+            sentinel_session.blocked_executions = (sentinel_session.blocked_executions or 0) + 1
+            sentinel_session.updated_at = now
+            db.add(sentinel_session)
+            db.commit()
+
+            action_hash = ToolCall(
+                tool_name=request.tool_name,
+                agent_id=request.agent_id,
+                intent_id=request.intent_id or "",
+            ).canonical_hash()
+
+            return InterceptResponse(
+                verdict=DecisionVerdict.DENY,
+                allowed=False,
+                reason=f"Session is in terminal state: {sentinel_session.session_state}",
+                decision_id=str(uuid.uuid4()),
+                action_hash=action_hash,
+                risk_score=1.0,
+                risk_level=RiskLevel.CRITICAL,
+                session_id=request.session_id,
+                intent_id=request.intent_id,
+                trace_id=trace_id,
+            )
+
+        # Scope enforcement (strict tools list)
+        scope = sentinel_session.authorized_scope or {}
+        if scope.get("enforce_strict_scope", True) and scope.get("allowed_tools"):
+            if request.tool_name not in scope["allowed_tools"]:
+                sentinel_session.blocked_executions = (sentinel_session.blocked_executions or 0) + 1
+                sentinel_session.scope_violations = (sentinel_session.scope_violations or 0) + 1
+                sentinel_session.updated_at = now
+
+                violation_event = SentinelBehavioralEventModel(
+                    id=f"bev_{uuid.uuid4().hex[:16]}",
+                    org_id=tenant.org_id,
+                    session_id=sentinel_session.id,
+                    correlation_id=trace_id,
+                    event_type="SCOPE_VIOLATION",
+                    tool_name=request.tool_name,
+                    resource_id=request.resource_id,
+                    verdict="DENY",
+                    execution_success=False,
+                    execution_error=f"Tool '{request.tool_name}' not permitted in session authorized scope",
+                    step_index=len(sentinel_session.events) + 1,
+                    event_payload={"allowed_tools": scope["allowed_tools"], "invoked_tool": request.tool_name},
+                    timestamp=now,
+                )
+                db.add(violation_event)
+                db.add(sentinel_session)
+                db.commit()
+
+                action_hash = ToolCall(
+                    tool_name=request.tool_name,
+                    agent_id=request.agent_id,
+                    intent_id=request.intent_id or "",
+                ).canonical_hash()
+
+                ThreatDetector.inspect_and_record(
+                    db=db,
+                    org_id=tenant.org_id,
+                    agent_id=request.agent_id,
+                    verdict="DENY",
+                    reason="SCOPE_VIOLATION_UNAUTHORIZED_TOOL",
+                    trace_id=trace_id,
+                    tool_name=request.tool_name,
+                    now=now,
+                )
+
+                return InterceptResponse(
+                    verdict=DecisionVerdict.DENY,
+                    allowed=False,
+                    reason=f"Tool '{request.tool_name}' not permitted in session authorized scope",
+                    decision_id=str(uuid.uuid4()),
+                    action_hash=action_hash,
+                    risk_score=1.0,
+                    risk_level=RiskLevel.CRITICAL,
+                    session_id=request.session_id,
+                    intent_id=request.intent_id,
+                    trace_id=trace_id,
+                )
+
+        # Record EXECUTION_ATTEMPT
+        attempt_event = SentinelBehavioralEventModel(
+            id=f"bev_{uuid.uuid4().hex[:16]}",
+            org_id=tenant.org_id,
+            session_id=sentinel_session.id,
+            correlation_id=trace_id,
+            event_type="EXECUTION_ATTEMPT",
+            tool_name=request.tool_name,
+            resource_id=request.resource_id,
+            step_index=len(sentinel_session.events) + 1,
+            event_payload=redact_sensitive_data(request.arguments or {}),
+            timestamp=now,
+        )
+        db.add(attempt_event)
+        db.commit()
+
     # 3. Resolve policy for tenant
     db_policy = None
     if agent and agent.policy_id:
@@ -188,21 +473,20 @@ def intercept_tool_call(
             .first()
         )
 
-    # Fallback to organization policy or global fallback
+    # Fallback to organization-scoped policy
     if not db_policy:
         db_policy = (
             db.query(PolicyModel)
             .filter(PolicyModel.org_id == tenant.org_id)
             .first()
         )
-    if not db_policy:
-        db_policy = db.query(PolicyModel).first()
 
     if not db_policy:
-        # Fail closed: No policy in system -> DENY
+        # Fail closed: No policy in tenant -> DENY (never fallback to other tenants)
         decision_id = str(uuid.uuid4())
         action_hash = ToolCall(
             tool_name=request.tool_name,
+            agent_id=request.agent_id,
             intent_id=request.intent_id or "",
         ).canonical_hash()
 
@@ -212,14 +496,14 @@ def intercept_tool_call(
             agent_id=request.agent_id,
             tool_name=request.tool_name,
             verdict=DecisionVerdict.DENY.value,
-            reason="POLICY_MISSING_FAIL_CLOSED",
+            reason="POLICY_NOT_FOUND_FOR_TENANT",
             policy_id="",
             action_hash=action_hash,
             trace_id=trace_id,
             intent_id=request.intent_id or "",
             risk_score=1.0,
             execution_success=False,
-            execution_error="No active policy found in tenant system",
+            execution_error="No active policy configured for tenant organization",
             timestamp=now,
         )
         db.commit()
@@ -278,65 +562,81 @@ def intercept_tool_call(
 
     # 7. Check if executing with a pre-approved token (Atomic Single-Use Check)
     if request.approval_id:
-        approval = (
+        # Atomic conditional consumption in authoritative database (must not be expired)
+        updated_count = (
             db.query(ApprovalModel)
             .filter(
                 ApprovalModel.id == request.approval_id,
                 ApprovalModel.org_id == tenant.org_id,
+                ApprovalModel.status == ApprovalStatus.APPROVED.value,
+                ApprovalModel.consumed == False,
+                ApprovalModel.action_hash == action_hash,
+                ApprovalModel.expires_at > now,
             )
-            .with_for_update(nowait=False) if db.bind and db.bind.dialect.name != "sqlite" else
-            db.query(ApprovalModel).filter(
-                ApprovalModel.id == request.approval_id,
-                ApprovalModel.org_id == tenant.org_id,
+            .update(
+                {
+                    ApprovalModel.consumed: True,
+                    ApprovalModel.consumed_at: now,
+                },
+                synchronize_session="fetch",
             )
-        ).first()
+        )
+        db.commit()
 
-        if not approval:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Approval token '{request.approval_id}' not found for tenant",
+        if updated_count == 0:
+            # Query the reason for rejection to return accurate fail-closed HTTP error
+            existing = (
+                db.query(ApprovalModel)
+                .filter(
+                    ApprovalModel.id == request.approval_id,
+                    ApprovalModel.org_id == tenant.org_id,
+                )
+                .first()
             )
-        if approval.status != ApprovalStatus.APPROVED.value:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Approval token is in status '{approval.status}', not APPROVED",
-            )
-        if approval.consumed:
-            ThreatDetector.inspect_and_record(
-                db=db,
-                org_id=tenant.org_id,
-                agent_id=request.agent_id,
-                verdict="DENY",
-                reason="REPLAY_ATTACK_CONSUMED_APPROVAL",
-                trace_id=trace_id,
-                tool_name=request.tool_name,
-                now=now,
-            )
+            if not existing:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Approval token '{request.approval_id}' not found for tenant",
+                )
+            if existing.consumed:
+                ThreatDetector.inspect_and_record(
+                    db=db,
+                    org_id=tenant.org_id,
+                    agent_id=request.agent_id,
+                    verdict="DENY",
+                    reason="REPLAY_ATTACK_CONSUMED_APPROVAL",
+                    trace_id=trace_id,
+                    tool_name=request.tool_name,
+                    now=now,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Approval token has already been consumed (replay blocked)",
+                )
+            if existing.status != ApprovalStatus.APPROVED.value:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Approval token is in status '{existing.status}', not APPROVED",
+                )
+            if existing.action_hash != action_hash:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Action payload hash does not match approved token",
+                )
+            expires_at = existing.expires_at
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            if expires_at < now:
+                existing.status = ApprovalStatus.EXPIRED.value
+                db.commit()
+                raise HTTPException(
+                    status_code=status.HTTP_410_GONE,
+                    detail="Approval token has expired",
+                )
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Approval token has already been consumed (replay blocked)",
+                detail="Approval token could not be consumed atomically",
             )
-        if approval.action_hash != action_hash:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Action payload hash does not match approved token",
-            )
-
-        expires_at = approval.expires_at
-        if expires_at.tzinfo is None:
-            expires_at = expires_at.replace(tzinfo=timezone.utc)
-        if expires_at < now:
-            approval.status = ApprovalStatus.EXPIRED.value
-            db.commit()
-            raise HTTPException(
-                status_code=status.HTTP_410_GONE,
-                detail="Approval token has expired",
-            )
-
-        # Mark consumed atomically
-        approval.consumed = True
-        approval.consumed_at = now
-        db.commit()
 
         # Audit ALLOW
         decision_id = str(uuid.uuid4())
@@ -356,6 +656,26 @@ def intercept_tool_call(
             execution_success=True,
             timestamp=now,
         )
+
+        if sentinel_session:
+            sentinel_session.total_executions = (sentinel_session.total_executions or 0) + 1
+            sentinel_session.updated_at = now
+            outcome_event = SentinelBehavioralEventModel(
+                id=f"bev_{uuid.uuid4().hex[:16]}",
+                org_id=tenant.org_id,
+                session_id=sentinel_session.id,
+                correlation_id=trace_id,
+                event_type="EXECUTION_OUTCOME",
+                tool_name=request.tool_name,
+                resource_id=request.resource_id,
+                verdict="ALLOW",
+                execution_success=True,
+                step_index=len(sentinel_session.events) + 1,
+                timestamp=now,
+            )
+            db.add(outcome_event)
+            db.add(sentinel_session)
+
         db.commit()
 
         return InterceptResponse(
@@ -368,6 +688,7 @@ def intercept_tool_call(
             risk_level=risk_level,
             approval_id=request.approval_id,
             intent_id=request.intent_id,
+            session_id=request.session_id,
             trace_id=trace_id,
             policy_version=getattr(sdk_policy, "version", 1),
         )
@@ -416,6 +737,29 @@ def intercept_tool_call(
         execution_success=(decision.verdict == DecisionVerdict.ALLOW),
         timestamp=now,
     )
+
+    if sentinel_session:
+        sentinel_session.total_executions = (sentinel_session.total_executions or 0) + 1
+        if decision.verdict != DecisionVerdict.ALLOW:
+            sentinel_session.blocked_executions = (sentinel_session.blocked_executions or 0) + 1
+        sentinel_session.updated_at = now
+        outcome_event = SentinelBehavioralEventModel(
+            id=f"bev_{uuid.uuid4().hex[:16]}",
+            org_id=tenant.org_id,
+            session_id=sentinel_session.id,
+            correlation_id=trace_id,
+            event_type="EXECUTION_OUTCOME",
+            tool_name=request.tool_name,
+            resource_id=request.resource_id,
+            verdict=decision.verdict.value,
+            execution_success=(decision.verdict == DecisionVerdict.ALLOW),
+            execution_error=decision.reason if decision.verdict != DecisionVerdict.ALLOW else None,
+            step_index=len(sentinel_session.events) + 1,
+            timestamp=now,
+        )
+        db.add(outcome_event)
+        db.add(sentinel_session)
+
     db.commit()
 
     if decision.verdict == DecisionVerdict.DENY:
@@ -439,7 +783,9 @@ def intercept_tool_call(
         risk_score=risk_score,
         risk_level=risk_level,
         approval_id=created_approval_id,
+        requires_approval=(decision.verdict == DecisionVerdict.REQUIRE_APPROVAL),
         intent_id=request.intent_id,
+        session_id=request.session_id,
         trace_id=trace_id,
         policy_version=getattr(sdk_policy, "version", 1),
     )

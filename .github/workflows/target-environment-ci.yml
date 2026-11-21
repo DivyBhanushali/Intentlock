@@ -1,0 +1,183 @@
+name: SICTACK Target-Environment Verification CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      trigger_reason:
+        description: 'Founder approval identifier'
+        required: false
+        default: 'Manual Founder CI Gate Verification'
+
+permissions:
+  contents: read
+
+jobs:
+  postgresql-rls-verification:
+    name: BLK-001 - PostgreSQL 15+ Live Engine RLS Verification
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: sictack_test
+          POSTGRES_USER: sictack_admin
+          POSTGRES_PASSWORD: test_ephemeral_admin_password_123
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e INTENTLOCK_SDK/sdk/python
+          pip install -r INTENTLOCK_SDK/backend/requirements.txt
+          pip install psycopg2-binary pytest
+
+      - name: Provision PostgreSQL Roles & Execute Migrations 001-007
+        env:
+          PGPASSWORD: test_ephemeral_admin_password_123
+          DATABASE_URL: postgresql://sictack_admin:test_ephemeral_admin_password_123@localhost:5432/sictack_test
+          PYTHONPATH: INTENTLOCK_SDK/backend:INTENTLOCK_SDK/sdk/python/src
+        run: |
+          set -e
+          # 1. Provision sictack_admin and sictack_app roles
+          psql -h localhost -U sictack_admin -d sictack_test -f INTENTLOCK_SDK/backend/app/db/roles_setup.sql
+          psql -h localhost -U sictack_admin -d sictack_test -c "ALTER ROLE sictack_app WITH PASSWORD 'test_ephemeral_app_password_123';"
+          
+          # 2. Execute full migration chain 001 through 007 as schema owner (sictack_admin)
+          python -c "
+          from app.db.session import engine
+          from app.db.migrations import run_migrations
+          applied = run_migrations(engine)
+          print('Successfully applied migrations:', applied)
+          "
+
+      - name: Run PostgreSQL RLS Engine Tests (Strict Zero-Skip)
+        env:
+          SICTACK_TEST_POSTGRES_URL: postgresql://sictack_admin:test_ephemeral_admin_password_123@localhost:5432/sictack_test
+          SICTACK_TEST_POSTGRES_APP_URL: postgresql://sictack_app:test_ephemeral_app_password_123@localhost:5432/sictack_test
+          TEST_POSTGRESQL_URL: postgresql://sictack_app:test_ephemeral_app_password_123@localhost:5432/sictack_test
+          ENVIRONMENT: testing
+          PYTHONPATH: INTENTLOCK_SDK/backend:INTENTLOCK_SDK/sdk/python/src
+        run: |
+          set -e
+          # Must execute and pass without skipping any live PostgreSQL tests
+          pytest INTENTLOCK_SDK/backend/tests/harness_postgresql.py -v --tb=short
+          pytest INTENTLOCK_SDK/backend/tests/test_postgresql_rls_integration.py -v --tb=short
+
+  redis-distributed-verification:
+    name: BLK-005 - Redis 7+ Distributed Concurrency & Fail-Closed Harness
+    runs-on: ubuntu-24.04
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e INTENTLOCK_SDK/sdk/python
+          pip install -r INTENTLOCK_SDK/backend/requirements.txt
+          pip install redis pytest
+
+      - name: Run Redis Distributed Concurrency Tests
+        env:
+          SICTACK_TEST_REDIS_URL: redis://localhost:6379/0
+          REDIS_URL: redis://localhost:6379/0
+          SICTACK_STRICT_DISTRIBUTED: "1"
+          ENVIRONMENT: testing
+          PYTHONPATH: INTENTLOCK_SDK/backend:INTENTLOCK_SDK/sdk/python/src
+        run: |
+          set -e
+          pytest INTENTLOCK_SDK/backend/tests/harness_redis_distributed.py -v --tb=short
+          pytest INTENTLOCK_SDK/backend/tests/test_distributed_concurrency.py -v --tb=short
+
+  linux-isolation-and-network:
+    name: BLK-002 & BLK-003 - Native Linux Isolation & Socket Pinning
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e INTENTLOCK_SDK/sdk/python
+          pip install pytest
+
+      - name: Install Bubblewrap and system utilities
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+
+      - name: Run Linux Isolation and DNS Rebinding Tests
+        env:
+          PYTHONPATH: INTENTLOCK_SDK/sdk/python/src
+        run: |
+          set -e
+          pytest INTENTLOCK_SDK/sdk/python/tests/harness_linux_network.py -v --tb=short
+          pytest INTENTLOCK_SDK/sdk/python/tests/test_network_destination_security.py -v --tb=short
+          pytest INTENTLOCK_SDK/sdk/python/tests/test_network_redirect_ssrf.py -v --tb=short
+
+  frontend-docker-build:
+    name: Frontend - Standalone Docker Container Packaging
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Build Production Frontend Docker Image & Verify Standalone Runtime
+        run: |
+          set -e
+          # 1. Build immutable production image
+          docker build -t sictack-console:ci INTENTLOCK_SDK/frontend
+          
+          # 2. Run container in background and probe healthcheck
+          docker run -d --name sictack-ui-test -p 3000:3000 sictack-console:ci
+          sleep 5
+          
+          # 3. Verify HTTP 200 response from containerized runtime
+          curl -f -I http://localhost:3000/ || (docker logs sictack-ui-test && exit 1)
+          
+          # 4. Clean up test container
+          docker stop sictack-ui-test
+          docker rm sictack-ui-test
