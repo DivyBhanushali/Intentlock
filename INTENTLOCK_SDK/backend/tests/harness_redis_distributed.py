@@ -34,6 +34,13 @@ REDIS_TEST_URL = os.environ.get("SICTACK_TEST_REDIS_URL", "")
 IS_REDIS_AVAILABLE = bool(REDIS_TEST_URL and REDIS_TEST_URL.startswith("redis://"))
 
 
+def _redis_process_worker(url: str, org: str, limit: int, q):
+    """Module-level process worker for cross-platform multiprocessing (spawn/fork compatible)."""
+    b = RedisStateSyncBackend(redis_url=url)
+    res = b.consume_quota(org, limit=limit, amount=1)
+    q.put(res)
+
+
 @pytest.mark.skipif(
     not IS_REDIS_AVAILABLE,
     reason="Isolated multi-worker Redis environment not configured. Preserving BLK-005 OPEN."
@@ -73,6 +80,7 @@ class TestDistributedRedisClusterHarness:
         """
         Spawns multiple independent OS processes executing atomic Redis quota checks concurrently.
         Validates cross-process synchronization and Lua atomic consistency across distinct PIDs.
+        Uses module-level _redis_process_worker for universal cross-platform pickling.
         """
         import multiprocessing
         test_org = f"org_mp_race_{uuid.uuid4().hex[:8]}"
@@ -83,13 +91,8 @@ class TestDistributedRedisClusterHarness:
         process_count = 6
         queue = multiprocessing.Queue()
 
-        def _process_worker(url: str, org: str, q: multiprocessing.Queue):
-            b = RedisStateSyncBackend(redis_url=url)
-            res = b.consume_quota(org, limit=limit, amount=1)
-            q.put(res)
-
         processes = [
-            multiprocessing.Process(target=_process_worker, args=(REDIS_TEST_URL, test_org, queue))
+            multiprocessing.Process(target=_redis_process_worker, args=(REDIS_TEST_URL, test_org, limit, queue))
             for _ in range(process_count)
         ]
 

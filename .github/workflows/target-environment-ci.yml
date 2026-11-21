@@ -52,18 +52,20 @@ jobs:
           pip install -r INTENTLOCK_SDK/backend/requirements.txt
           pip install psycopg2-binary pytest
 
-      - name: Provision PostgreSQL Roles & Execute Migrations 001-007
+      - name: Provision Initial PostgreSQL Roles
         env:
           PGPASSWORD: test_ephemeral_admin_password_123
+        run: |
+          set -e
+          psql -h localhost -U sictack_admin -d sictack_test -f INTENTLOCK_SDK/backend/app/db/roles_setup.sql
+          psql -h localhost -U sictack_admin -d sictack_test -c "ALTER ROLE sictack_app WITH PASSWORD 'test_ephemeral_app_password_123';"
+
+      - name: Initialize Base Schema & Apply Migrations 001-008
+        env:
           DATABASE_URL: postgresql://sictack_admin:test_ephemeral_admin_password_123@localhost:5432/sictack_test
           PYTHONPATH: INTENTLOCK_SDK/backend:INTENTLOCK_SDK/sdk/python/src
         run: |
           set -e
-          # 1. Provision sictack_admin and sictack_app roles
-          psql -h localhost -U sictack_admin -d sictack_test -f INTENTLOCK_SDK/backend/app/db/roles_setup.sql
-          psql -h localhost -U sictack_admin -d sictack_test -c "ALTER ROLE sictack_app WITH PASSWORD 'test_ephemeral_app_password_123';"
-          
-          # 2. Base table creation & full migration chain 001-007 as schema owner (sictack_admin)
           python -c "
           from app.db.session import engine
           from app.db.models import Base
@@ -73,7 +75,11 @@ jobs:
           print('Successfully initialized base schema and applied migrations:', applied)
           "
 
-          # 3. Apply post-creation DML permissions, sequence access, and FORCE RLS to sictack_app
+      - name: Enforce Post-Migration Privileges & FORCE ROW LEVEL SECURITY
+        env:
+          PGPASSWORD: test_ephemeral_admin_password_123
+        run: |
+          set -e
           psql -h localhost -U sictack_admin -d sictack_test -f INTENTLOCK_SDK/backend/app/db/roles_setup.sql
 
       - name: Run PostgreSQL RLS Engine Tests (Strict Zero-Skip)
@@ -154,14 +160,25 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y bubblewrap
 
-      - name: Run Linux Isolation and DNS Rebinding Tests
+      - name: Verify Linux Kernel & Sandbox Capability Harness (BLK-002)
         env:
           PYTHONPATH: INTENTLOCK_SDK/sdk/python/src
         run: |
           set -e
           pytest INTENTLOCK_SDK/sdk/python/tests/harness_linux_network.py -v --tb=short
-          pytest INTENTLOCK_SDK/sdk/python/tests/test_network_destination_security.py -v --tb=short
-          pytest INTENTLOCK_SDK/sdk/python/tests/test_network_redirect_ssrf.py -v --tb=short
+
+      - name: Verify Network Destination Filtering & SSRF Defense (BLK-003)
+        env:
+          PYTHONPATH: INTENTLOCK_SDK/sdk/python/src
+        run: |
+          set -e
+          pytest INTENTLOCK_SDK/sdk/python/tests/test_network_destination_security.py INTENTLOCK_SDK/sdk/python/tests/test_network_redirect_ssrf.py -v --tb=short
+
+      - name: Verify Real Socket Network Isolation & Loopback Pinning (BLK-003)
+        env:
+          PYTHONPATH: INTENTLOCK_SDK/sdk/python/src
+        run: |
+          set -e
           pytest INTENTLOCK_SDK/sdk/python/tests/test_real_socket_network_isolation.py -v --tb=short
 
   frontend-docker-build:

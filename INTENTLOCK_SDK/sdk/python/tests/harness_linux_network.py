@@ -99,9 +99,13 @@ class TestLinuxRuntimeIsolationHarness:
                 return
 
             err_lower = res.stderr.lower()
-            if "permission denied" in err_lower or "user namespace" in err_lower or "unshare" in err_lower:
+            if "rtm_newaddr" in err_lower or "loopback" in err_lower:
                 pytest.skip(
-                    f"ENVIRONMENT LIMITATION: Bubblewrap installed but unprivileged user namespaces restricted by host policy ({res.stderr.strip()}). Preserving BLK-002 OPEN."
+                    f"ENVIRONMENT LIMITATION: Bubblewrap installed but containerized runner restricts unprivileged network namespace loopback setup ({res.stderr.strip()}). Preserving BLK-002 OPEN."
+                )
+            elif "permission denied" in err_lower or "user namespace" in err_lower or "unshare" in err_lower:
+                pytest.skip(
+                    f"ENVIRONMENT LIMITATION: Bubblewrap installed but unprivileged user namespaces restricted by host/AppArmor policy ({res.stderr.strip()}). Preserving BLK-002 OPEN."
                 )
             else:
                 pytest.fail(f"BLK-002 BLOCKER: Bubblewrap execution failed unexpectedly (code {res.returncode}): {res.stderr}")

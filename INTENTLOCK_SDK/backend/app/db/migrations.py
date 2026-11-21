@@ -705,16 +705,29 @@ def apply_migrations(engine: Engine) -> list[str]:
                         for tbl in tenant_tables:
                             if sa.inspect(conn).has_table(tbl):
                                 conn.execute(sa.text(f"ALTER TABLE {tbl} ENABLE ROW LEVEL SECURITY;"))
-                                conn.execute(sa.text(f"""
-                                    DO $$
-                                    BEGIN
-                                        DROP POLICY IF EXISTS tenant_isolation_policy ON {tbl};
-                                        CREATE POLICY tenant_isolation_policy ON {tbl}
-                                            FOR ALL
-                                            USING (org_id = NULLIF(current_setting('app.current_tenant_id', true), ''))
-                                            WITH CHECK (org_id = NULLIF(current_setting('app.current_tenant_id', true), ''));
-                                    END $$;
-                                """))
+                                if tbl == "policy_versions":
+                                    # policy_versions establishes tenant ownership via parent policy (policy_id -> policies.id)
+                                    conn.execute(sa.text(f"""
+                                        DO $$
+                                        BEGIN
+                                            DROP POLICY IF EXISTS tenant_isolation_policy ON {tbl};
+                                            CREATE POLICY tenant_isolation_policy ON {tbl}
+                                                FOR ALL
+                                                USING (policy_id IN (SELECT id FROM public.policies WHERE org_id = NULLIF(current_setting('app.current_tenant_id', true), '')))
+                                                WITH CHECK (policy_id IN (SELECT id FROM public.policies WHERE org_id = NULLIF(current_setting('app.current_tenant_id', true), '')));
+                                        END $$;
+                                    """))
+                                else:
+                                    conn.execute(sa.text(f"""
+                                        DO $$
+                                        BEGIN
+                                            DROP POLICY IF EXISTS tenant_isolation_policy ON {tbl};
+                                            CREATE POLICY tenant_isolation_policy ON {tbl}
+                                                FOR ALL
+                                                USING (org_id = NULLIF(current_setting('app.current_tenant_id', true), ''))
+                                                WITH CHECK (org_id = NULLIF(current_setting('app.current_tenant_id', true), ''));
+                                        END $$;
+                                    """))
                                 logger.info(f"Enforced strict Row-Level Security policy on table '{tbl}'")
 
                     _record_migration(conn, m5_version, m5_name)
@@ -860,6 +873,36 @@ def apply_migrations(engine: Engine) -> list[str]:
                 except Exception as exc:
                     logger.error(f"Failed to apply migration {m7_version} ({m7_name}): {exc}", exc_info=True)
                     raise MigrationError(f"Migration {m7_name} failed: {exc}") from exc
+
+            # ─────────────────────────────────────────────────────────────
+            # MIGRATION 008: Policy Versions Parent RLS Hardening (Phase 5C.7)
+            # ─────────────────────────────────────────────────────────────
+            m8_version = 8
+            m8_name = "008_policy_versions_rls_hardening"
+            if not _is_migration_applied(conn, m8_version):
+                logger.info(f"Applying migration {m8_version}: {m8_name} on {dialect}")
+                try:
+                    if dialect == "postgresql":
+                        if sa.inspect(conn).has_table("policy_versions"):
+                            conn.execute(sa.text("ALTER TABLE policy_versions ENABLE ROW LEVEL SECURITY;"))
+                            conn.execute(sa.text("""
+                                DO $$
+                                BEGIN
+                                    DROP POLICY IF EXISTS tenant_isolation_policy ON policy_versions;
+                                    CREATE POLICY tenant_isolation_policy ON policy_versions
+                                        FOR ALL
+                                        USING (policy_id IN (SELECT id FROM public.policies WHERE org_id = NULLIF(current_setting('app.current_tenant_id', true), '')))
+                                        WITH CHECK (policy_id IN (SELECT id FROM public.policies WHERE org_id = NULLIF(current_setting('app.current_tenant_id', true), '')));
+                                END $$;
+                            """))
+                            logger.info("Enforced parent-policy Row-Level Security policy on 'policy_versions' (Migration 008)")
+
+                    _record_migration(conn, m8_version, m8_name)
+                    applied.append(m8_name)
+                    logger.info(f"Successfully applied migration {m8_version}: {m8_name}")
+                except Exception as exc:
+                    logger.error(f"Failed to apply migration {m8_version} ({m8_name}): {exc}", exc_info=True)
+                    raise MigrationError(f"Migration {m8_name} failed: {exc}") from exc
 
 
 

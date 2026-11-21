@@ -225,3 +225,74 @@ class TestPostgreSQLRLSEngineEnforcement:
             conn.execute(sa.text("DISCARD ALL;"))
             ctx_after = conn.execute(sa.text("SELECT current_setting('app.current_tenant_id', true)")).scalar()
             assert ctx_after == "" or ctx_after is None, "DISCARD ALL must purge custom tenant context"
+
+    def test_policy_versions_cross_tenant_isolation_negative(self, pg_app_engine, pg_admin_engine):
+        """
+        Verify policy_versions tenant isolation invariants:
+        1. Tenant B cannot read Tenant A's policy versions.
+        2. Tenant B cannot INSERT a policy version referencing Tenant A's policy ID.
+        3. Connection without tenant context returns 0 rows and cannot INSERT policy versions.
+        4. Tenant A can read its own policy versions and create new versions for its own policies.
+        """
+        org_a = f"org_{uuid.uuid4().hex[:8]}"
+        org_b = f"org_{uuid.uuid4().hex[:8]}"
+        pol_a = f"pol_a_{uuid.uuid4().hex[:8]}"
+        pol_b = f"pol_b_{uuid.uuid4().hex[:8]}"
+        ver_a1 = f"ver_a1_{uuid.uuid4().hex[:8]}"
+        ver_b1 = f"ver_b1_{uuid.uuid4().hex[:8]}"
+
+        # Admin seeds parent organizations, policies, and policy_versions
+        with pg_admin_engine.connect() as conn:
+            conn.execute(sa.text("""
+                INSERT INTO organizations (id, name, status)
+                VALUES (:org_a, 'Org Alpha', 'ACTIVE'), (:org_b, 'Org Beta', 'ACTIVE')
+                ON CONFLICT (id) DO NOTHING;
+            """), {"org_a": org_a, "org_b": org_b})
+            conn.execute(sa.text("""
+                INSERT INTO policies (id, org_id, name, description, is_active, max_risk_level, version)
+                VALUES (:pol_a, :org_a, 'Policy Alpha', 'Policy A', true, 'MEDIUM', 1),
+                       (:pol_b, :org_b, 'Policy Beta', 'Policy B', true, 'HIGH', 1)
+                ON CONFLICT (id) DO NOTHING;
+            """), {"pol_a": pol_a, "org_a": org_a, "pol_b": pol_b, "org_b": org_b})
+            conn.execute(sa.text("""
+                INSERT INTO policy_versions (id, policy_id, version, name, description)
+                VALUES (:ver_a1, :pol_a, 1, 'Policy Alpha v1', 'Snapshot A1'),
+                       (:ver_b1, :pol_b, 1, 'Policy Beta v1', 'Snapshot B1')
+                ON CONFLICT (id) DO NOTHING;
+            """), {"ver_a1": ver_a1, "pol_a": pol_a, "ver_b1": ver_b1, "pol_b": pol_b})
+            conn.commit()
+
+        # 1. Tenant B querying Policy A versions -> 0 rows
+        with pg_app_engine.connect() as conn:
+            conn.execute(sa.text(f"SET LOCAL app.current_tenant_id = '{org_b}';"))
+            rows = conn.execute(sa.text("SELECT * FROM policy_versions WHERE policy_id = :pol_a"), {"pol_a": pol_a}).fetchall()
+            assert len(rows) == 0, "Tenant B must NOT see Tenant A's policy versions"
+
+            # 2. Tenant B attempting to INSERT a version referencing Tenant A's policy -> RLS WITH CHECK violation
+            probe_id = f"pv_probe_{uuid.uuid4().hex[:8]}"
+            with pytest.raises(sa.exc.DBAPIError) as exc_info:
+                conn.execute(sa.text("""
+                    INSERT INTO policy_versions (id, policy_id, version, name, description)
+                    VALUES (:id, :pol_a, 2, 'Unauthorized Version', 'Attacker Probe')
+                """), {"id": probe_id, "pol_a": pol_a})
+            assert "row-level security" in str(exc_info.value).lower()
+
+        # 3. Missing tenant context -> 0 rows and forbidden insert
+        with pg_app_engine.connect() as conn:
+            rows = conn.execute(sa.text("SELECT * FROM policy_versions")).fetchall()
+            assert len(rows) == 0, "Missing tenant context must return zero policy versions"
+
+            probe_id2 = f"pv_probe_nocontext_{uuid.uuid4().hex[:8]}"
+            with pytest.raises(sa.exc.DBAPIError) as exc_info:
+                conn.execute(sa.text("""
+                    INSERT INTO policy_versions (id, policy_id, version, name, description)
+                    VALUES (:id, :pol_a, 3, 'No Context Version', 'Probe')
+                """), {"id": probe_id2, "pol_a": pol_a})
+            assert "row-level security" in str(exc_info.value).lower()
+
+        # 4. Tenant A querying Policy A versions -> exactly 1 row (ver_a1)
+        with pg_app_engine.connect() as conn:
+            conn.execute(sa.text(f"SET LOCAL app.current_tenant_id = '{org_a}';"))
+            rows = conn.execute(sa.text("SELECT * FROM policy_versions WHERE policy_id = :pol_a"), {"pol_a": pol_a}).fetchall()
+            assert len(rows) == 1, "Tenant A must see its own policy version"
+            assert rows[0].id == ver_a1
