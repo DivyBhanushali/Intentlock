@@ -119,6 +119,7 @@ def intercept_tool_call(
     coordinator = get_state_sync_coordinator()
 
     # Replay protection via distributed nonce registration
+    # Note: Early security denial risk_score=1.0 represents conservative fail-closed enforcement severity, not a measured threat probability.
     if getattr(request, "nonce", None):
         if not coordinator.register_nonce(request.nonce):
             act_hash = ToolCall(tool_name=request.tool_name, agent_id=request.agent_id).canonical_hash()
@@ -128,6 +129,7 @@ def intercept_tool_call(
                 reason="REPLAY_DETECTED: Action nonce has already been consumed or duplicated",
                 decision_id=str(uuid.uuid4()),
                 action_hash=act_hash,
+                risk_score=1.0,
                 risk_level=RiskLevel.CRITICAL,
                 policy_id="",
                 requires_approval=False,
@@ -144,13 +146,14 @@ def intercept_tool_call(
             reason=f"TENANT_SUSPENDED: Organization status is {org.status}",
             decision_id=str(uuid.uuid4()),
             action_hash=act_hash,
+            risk_score=1.0,
             risk_level=RiskLevel.CRITICAL,
             policy_id="",
             requires_approval=False,
             trace_id=trace_id,
         )
 
-    max_monthly = org.max_monthly_actions if org and org.max_monthly_actions else 100000
+    max_monthly = org.max_monthly_actions if (org and org.max_monthly_actions is not None) else 100000
     thirty_days_ago = now - timedelta(days=30)
     current_monthly_count = (
         db.query(AuditEventModel)
@@ -169,6 +172,7 @@ def intercept_tool_call(
             reason="QUOTA_EXCEEDED: Monthly action entitlement exhausted",
             decision_id=str(uuid.uuid4()),
             action_hash=act_hash,
+            risk_score=1.0,
             risk_level=RiskLevel.CRITICAL,
             policy_id="",
             requires_approval=False,
@@ -191,6 +195,7 @@ def intercept_tool_call(
                 reason=f"AGENT_{agent_status.upper()}: Agent is not in active operational state",
                 decision_id=str(uuid.uuid4()),
                 action_hash=act_hash,
+                risk_score=1.0,
                 risk_level=RiskLevel.CRITICAL,
                 policy_id=agent.policy_id or "",
                 requires_approval=False,

@@ -192,7 +192,7 @@ class TestDistributedRedisClusterHarness:
         from fastapi.testclient import TestClient
         from app.main import app
         from app.db.session import engine, SessionLocal
-        from app.db.models import Base, OrganizationModel, ApiKeyModel
+        from app.db.models import Base, OrganizationModel, ApiKeyModel, PolicyModel
         from app.db.migrations import apply_migrations
         from sqlalchemy import inspect
 
@@ -211,7 +211,7 @@ class TestDistributedRedisClusterHarness:
         raw_key = f"ilk_live_test_{uuid.uuid4().hex}"
         key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
 
-        # Seed organization and API key in database
+        # Seed organization, API key, and default policy in database
         db = SessionLocal()
         try:
             org = OrganizationModel(
@@ -232,6 +232,17 @@ class TestDistributedRedisClusterHarness:
                 is_active=True,
             )
             db.merge(api_key)
+
+            pol = PolicyModel(
+                id=f"pol_{uuid.uuid4().hex[:8]}",
+                org_id=test_org_id,
+                name="Gateway Quota Test Policy",
+                allowed_permissions=["database_query"],
+                allowed_resources=["*"],
+                max_risk_level="HIGH",
+                version=1,
+            )
+            db.merge(pol)
             db.commit()
         finally:
             db.close()

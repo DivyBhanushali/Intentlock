@@ -124,8 +124,8 @@ class TestPostgreSQLRLSEngineEnforcement:
                 ON CONFLICT (id) DO NOTHING;
             """), {"org_a": org_a, "org_b": org_b, "slug_a": slug_a, "slug_b": slug_b})
             conn.execute(sa.text("""
-                INSERT INTO policies (id, org_id, name, description, is_active, max_risk_level, version)
-                VALUES (:id, :org_id, 'Policy A', 'Test', true, 'MEDIUM', 1)
+                INSERT INTO policies (id, org_id, name, description, max_risk_level, version)
+                VALUES (:id, :org_id, 'Policy A', 'Test', 'MEDIUM', 1)
             """), {"id": pol_id, "org_id": org_a})
             conn.commit()
 
@@ -282,9 +282,9 @@ class TestPostgreSQLRLSEngineEnforcement:
                 ON CONFLICT (id) DO NOTHING;
             """), {"org_a": org_a, "org_b": org_b, "slug_a": slug_a, "slug_b": slug_b})
             conn.execute(sa.text("""
-                INSERT INTO policies (id, org_id, name, description, is_active, max_risk_level, version)
-                VALUES (:pol_a, :org_a, 'Policy Alpha', 'Policy A', true, 'MEDIUM', 1),
-                       (:pol_b, :org_b, 'Policy Beta', 'Policy B', true, 'HIGH', 1)
+                INSERT INTO policies (id, org_id, name, description, max_risk_level, version)
+                VALUES (:pol_a, :org_a, 'Policy Alpha', 'Policy A', 'MEDIUM', 1),
+                       (:pol_b, :org_b, 'Policy Beta', 'Policy B', 'HIGH', 1)
                 ON CONFLICT (id) DO NOTHING;
             """), {"pol_a": pol_a, "org_a": org_a, "pol_b": pol_b, "org_b": org_b})
             conn.execute(sa.text("""
