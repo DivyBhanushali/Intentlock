@@ -194,6 +194,7 @@ class TestDistributedRedisClusterHarness:
         from app.db.session import engine, SessionLocal
         from app.db.models import Base, OrganizationModel, ApiKeyModel, PolicyModel
         from app.db.migrations import apply_migrations
+        from app.core.security import hash_api_key
         from sqlalchemy import inspect
 
         # Ensure database tables exist and full migration chain is applied
@@ -209,7 +210,7 @@ class TestDistributedRedisClusterHarness:
 
         test_org_id = f"org_gw_{uuid.uuid4().hex[:8]}"
         raw_key = f"ilk_live_test_{uuid.uuid4().hex}"
-        key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+        key_hash = hash_api_key(raw_key)
 
         # Seed organization, API key, and default policy in database
         db = SessionLocal()
@@ -260,10 +261,14 @@ class TestDistributedRedisClusterHarness:
                 json={
                     "agent_id": f"agent_{idx}",
                     "tool_name": "database_query",
+                    "arguments": {"sql": "SELECT 1"},
                     "parameters": {"sql": "SELECT 1"},
                 },
             )
             responses.append((resp.status_code, resp.json()))
+
+        # Assert all 5 requests are authenticated and reach quota evaluation
+        assert all(r[0] == 200 for r in responses), f"Expected HTTP 200 for all requests, got {[r[0] for r in responses]}"
 
         # Check gateway verdicts
         allowed_resps = [r for r in responses if r[0] == 200 and r[1].get("verdict") == "ALLOW"]
