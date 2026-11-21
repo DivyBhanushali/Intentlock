@@ -210,6 +210,7 @@ class TestDistributedRedisClusterHarness:
             org = OrganizationModel(
                 id=test_org_id,
                 name="Gateway Quota Test Org",
+                slug=f"gw-quota-{test_org_id}",
                 status="ACTIVE",
                 max_monthly_actions=3,
             )
