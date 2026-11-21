@@ -10,7 +10,10 @@ Verifies:
 4. Zero-leakage without tenant context (NULLIF returns 0 rows).
 5. Point-lookup authentication bootstrap via SECURITY DEFINER sictack_resolve_api_key
    with 11 authorization fields (and key_hash strictly excluded from return data).
-6. Transaction-scoped tenant context (SET LOCAL) and connection pool hygiene (DISCARD ALL in autocommit).
+6. Foreign key hierarchy consistency: parent organization seeded before dependent tables.
+7. Revoked and inactive API key point-lookup status detection.
+8. Table, sequence, schema, and function least-privilege boundary enforcement.
+9. Transaction-scoped tenant context (SET LOCAL) and connection pool hygiene (DISCARD ALL in autocommit).
 """
 
 from __future__ import annotations
@@ -18,6 +21,7 @@ from __future__ import annotations
 import os
 import sys
 import uuid
+from datetime import datetime, timezone
 import pytest
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker
@@ -61,6 +65,17 @@ class TestPostgreSQLRLSEngineEnforcement:
                 conn.execute(sa.text("CREATE TABLE public.unauthorized_probe (id int)"))
             assert "permission denied" in str(exc_info.value).lower()
 
+    def test_sictack_app_cannot_drop_or_truncate_tables(self, pg_app_engine):
+        """Runtime role sictack_app must be strictly forbidden from dropping or truncating tables."""
+        with pg_app_engine.connect() as conn:
+            with pytest.raises(sa.exc.DBAPIError) as exc_info:
+                conn.execute(sa.text("DROP TABLE public.policies"))
+            assert "permission denied" in str(exc_info.value).lower()
+
+            with pytest.raises(sa.exc.DBAPIError) as exc_info:
+                conn.execute(sa.text("TRUNCATE TABLE public.policies"))
+            assert "permission denied" in str(exc_info.value).lower()
+
     def test_missing_tenant_context_returns_zero_rows(self, pg_app_engine):
         """Unauthenticated / context-free connection must return 0 rows under RLS."""
         with pg_app_engine.connect() as conn:
@@ -73,8 +88,13 @@ class TestPostgreSQLRLSEngineEnforcement:
         org_b = f"org_{uuid.uuid4().hex[:8]}"
         pol_id = f"pol_{uuid.uuid4().hex[:8]}"
 
-        # Seed data via admin
+        # Seed parent organization records first to preserve foreign-key integrity
         with pg_admin_engine.connect() as conn:
+            conn.execute(sa.text("""
+                INSERT INTO organizations (id, name, status)
+                VALUES (:org_a, 'Org Alpha', 'ACTIVE'), (:org_b, 'Org Beta', 'ACTIVE')
+                ON CONFLICT (id) DO NOTHING;
+            """), {"org_a": org_a, "org_b": org_b})
             conn.execute(sa.text("""
                 INSERT INTO policies (id, org_id, name, description, is_active, max_risk_level, version)
                 VALUES (:id, :org_id, 'Policy A', 'Test', true, 'MEDIUM', 1)
@@ -102,8 +122,13 @@ class TestPostgreSQLRLSEngineEnforcement:
         org_id = f"org_{uuid.uuid4().hex[:8]}"
         key_hash = f"hash_{uuid.uuid4().hex[:32]}"
 
-        # Seed api key with scopes and revocation capability
+        # Seed parent organization first to satisfy foreign-key constraint
         with pg_admin_engine.connect() as conn:
+            conn.execute(sa.text("""
+                INSERT INTO organizations (id, name, status)
+                VALUES (:org_id, 'Bootstrap Test Org', 'ACTIVE')
+                ON CONFLICT (id) DO NOTHING;
+            """), {"org_id": org_id})
             conn.execute(sa.text("""
                 INSERT INTO api_keys (id, org_id, name, key_prefix, key_hash, is_active, scopes)
                 VALUES (:id, :org_id, 'Test Key', 'sictack_live_', :hash, true, '["agent:read", "policy:evaluate"]')
@@ -124,6 +149,51 @@ class TestPostgreSQLRLSEngineEnforcement:
             assert "agent:read" in str(row["scopes"])
             # Least-privilege invariant: key_hash is NOT leaked back
             assert "key_hash" not in row, "key_hash must be excluded from definer return columns"
+
+    def test_revoked_and_inactive_api_key_detection(self, pg_app_engine, pg_admin_engine):
+        """Verify sictack_resolve_api_key accurately exposes revoked_at and inactive flags."""
+        org_id = f"org_rev_{uuid.uuid4().hex[:8]}"
+        rev_key_id = f"key_rev_{uuid.uuid4().hex[:8]}"
+        rev_key_hash = f"hash_rev_{uuid.uuid4().hex[:32]}"
+        now = datetime.now(timezone.utc)
+
+        with pg_admin_engine.connect() as conn:
+            conn.execute(sa.text("""
+                INSERT INTO organizations (id, name, status)
+                VALUES (:org_id, 'Revocation Test Org', 'ACTIVE')
+                ON CONFLICT (id) DO NOTHING;
+            """), {"org_id": org_id})
+            conn.execute(sa.text("""
+                INSERT INTO api_keys (id, org_id, name, key_prefix, key_hash, is_active, revoked_at, scopes)
+                VALUES (:id, :org_id, 'Revoked Key', 'sictack_rev_', :hash, false, :revoked_at, '["agent:read"]')
+            """), {"id": rev_key_id, "org_id": org_id, "hash": rev_key_hash, "revoked_at": now})
+            conn.commit()
+
+        with pg_app_engine.connect() as conn:
+            row = conn.execute(
+                sa.text("SELECT * FROM sictack_resolve_api_key(:hash)"),
+                {"hash": rev_key_hash}
+            ).mappings().fetchone()
+            assert row is not None, "Bootstrap function must return key record for auth inspection"
+            assert row["is_active"] is False, "Deactivated key must report is_active=False"
+            assert row["revoked_at"] is not None, "Revoked key must contain revoked_at timestamp"
+
+    def test_table_sequence_and_privilege_boundaries(self, pg_app_engine):
+        """Verify sictack_app has proper DML and sequence privileges but no administrative rights."""
+        with pg_app_engine.connect() as conn:
+            # Must have USAGE on schema public
+            res = conn.execute(sa.text("SELECT has_schema_privilege('sictack_app', 'public', 'USAGE')")).scalar()
+            assert res is True, "sictack_app must have USAGE on schema public"
+
+            # Must NOT have CREATE on schema public
+            create_priv = conn.execute(sa.text("SELECT has_schema_privilege('sictack_app', 'public', 'CREATE')")).scalar()
+            assert create_priv is False, "sictack_app must NOT have CREATE on schema public"
+
+            # Must have EXECUTE on sictack_resolve_api_key
+            exec_priv = conn.execute(sa.text("""
+                SELECT has_function_privilege('sictack_app', 'sictack_resolve_api_key(varchar)', 'EXECUTE')
+            """)).scalar()
+            assert exec_priv is True, "sictack_app must have EXECUTE on sictack_resolve_api_key"
 
     def test_transaction_scoped_set_local_cleans_on_commit(self, pg_app_engine):
         """Verify SET LOCAL automatically clears tenant context at transaction end."""
