@@ -56,7 +56,7 @@ class ThreatDetector:
                 created_at=current_time,
             )
 
-        # --- Rule 2: Intent Boundary Violation / Tampering ---
+        # --- Rule 2: Intent & Identity / Scope Boundary Violation ---
         elif reason in (
             "TOOL_IN_DENIED_ACTIONS",
             "ACTION_NOT_IN_INTENT_SCOPE",
@@ -64,6 +64,10 @@ class ThreatDetector:
             "INTENT_CONTEXT_EXPIRED",
             "INTENT_CONTEXT_REVOKED",
             "AGENT_NOT_AUTHORIZED_FOR_INTENT",
+            "API_KEY_AGENT_MISMATCH",
+            "CROSS_TENANT_AGENT_UNAUTHORIZED",
+            "CROSS_AGENT_SESSION_UNAUTHORIZED",
+            "MANDATORY_SESSION_REQUIRED",
         ):
             threat_model = SecurityThreatEventModel(
                 id=f"thr_{uuid.uuid4().hex[:12]}",
@@ -71,7 +75,7 @@ class ThreatDetector:
                 agent_id=agent_id,
                 threat_category="INTENT_VIOLATION",
                 severity="HIGH",
-                description=f"Agent breached active IntentContext confinement boundary: {reason} on tool '{tool_name}'.",
+                description=f"Security boundary violation detected: {reason} on tool '{tool_name}'.",
                 detection_rule="RULE_INTENT_TAMPERING",
                 related_trace_id=trace_id,
                 recommended_response="ALERT_ADMIN",

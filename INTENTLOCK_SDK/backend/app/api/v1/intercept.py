@@ -180,6 +180,110 @@ def intercept_tool_call(
         )
 
     # 1. Update agent last_active timestamp if registered and verify agent status
+    # 1A. Check if API key is restricted to specific agent identity
+    if tenant.api_key:
+        key_scopes = getattr(tenant.api_key, "scopes", []) or []
+        if isinstance(key_scopes, str):
+            key_scopes = [key_scopes]
+        agent_scopes = [s.split("agent:", 1)[1] for s in key_scopes if s.startswith("agent:") and len(s) > 6]
+        if agent_scopes and request.agent_id not in agent_scopes:
+            act_hash = ToolCall(tool_name=request.tool_name, agent_id=request.agent_id).canonical_hash()
+            audit = append_audit_event(
+                db=db,
+                org_id=tenant.org_id,
+                agent_id=request.agent_id,
+                tool_name=request.tool_name,
+                verdict=DecisionVerdict.DENY.value,
+                reason="API_KEY_AGENT_MISMATCH",
+                policy_id="",
+                action_hash=act_hash,
+                trace_id=trace_id,
+                intent_id=request.intent_id or "",
+                risk_score=1.0,
+                execution_success=False,
+                execution_error=f"API key is restricted to agent(s) {agent_scopes}, but request specified '{request.agent_id}'",
+                timestamp=now,
+            )
+            db.commit()
+
+            try:
+                ThreatDetector.inspect_and_record(
+                    db=db,
+                    org_id=tenant.org_id,
+                    agent_id=request.agent_id,
+                    verdict="DENY",
+                    reason="API_KEY_AGENT_MISMATCH",
+                    trace_id=trace_id,
+                    tool_name=request.tool_name,
+                    now=now,
+                )
+            except Exception:
+                pass  # Threat recording failure must not convert DENY to ALLOW
+
+            return InterceptResponse(
+                verdict=DecisionVerdict.DENY,
+                allowed=False,
+                reason=f"API_KEY_AGENT_MISMATCH: API key is not authorized for agent '{request.agent_id}'",
+                decision_id=str(uuid.uuid4()),
+                action_hash=act_hash,
+                risk_score=1.0,
+                risk_level=RiskLevel.CRITICAL,
+                policy_id="",
+                requires_approval=False,
+                intent_id=request.intent_id,
+                trace_id=trace_id,
+            )
+
+    # 1B. Check for cross-tenant agent reference
+    other_tenant_agent = db.query(AgentModel).filter(AgentModel.id == request.agent_id).first()
+    if other_tenant_agent and other_tenant_agent.org_id != tenant.org_id:
+        act_hash = ToolCall(tool_name=request.tool_name, agent_id=request.agent_id).canonical_hash()
+        audit = append_audit_event(
+            db=db,
+            org_id=tenant.org_id,
+            agent_id=request.agent_id,
+            tool_name=request.tool_name,
+            verdict=DecisionVerdict.DENY.value,
+            reason="CROSS_TENANT_AGENT_UNAUTHORIZED",
+            policy_id="",
+            action_hash=act_hash,
+            trace_id=trace_id,
+            intent_id=request.intent_id or "",
+            risk_score=1.0,
+            execution_success=False,
+            execution_error=f"Agent '{request.agent_id}' belongs to organization '{other_tenant_agent.org_id}', not '{tenant.org_id}'",
+            timestamp=now,
+        )
+        db.commit()
+
+        try:
+            ThreatDetector.inspect_and_record(
+                db=db,
+                org_id=tenant.org_id,
+                agent_id=request.agent_id,
+                verdict="DENY",
+                reason="CROSS_TENANT_AGENT_UNAUTHORIZED",
+                trace_id=trace_id,
+                tool_name=request.tool_name,
+                now=now,
+            )
+        except Exception:
+            pass  # Threat recording failure must not convert DENY to ALLOW
+
+        return InterceptResponse(
+            verdict=DecisionVerdict.DENY,
+            allowed=False,
+            reason=f"CROSS_TENANT_AGENT_UNAUTHORIZED: Agent '{request.agent_id}' does not belong to authenticated tenant",
+            decision_id=str(uuid.uuid4()),
+            action_hash=act_hash,
+            risk_score=1.0,
+            risk_level=RiskLevel.CRITICAL,
+            policy_id="",
+            requires_approval=False,
+            intent_id=request.intent_id,
+            trace_id=trace_id,
+        )
+
     agent = (
         db.query(AgentModel)
         .filter(AgentModel.id == request.agent_id, AgentModel.org_id == tenant.org_id)
@@ -266,12 +370,13 @@ def intercept_tool_call(
         sdk_intent = _build_sdk_intent(db_intent)
 
     # 2b. SENTINEL Task Session Enforcement (Phase 1B/1C)
+    req_session_id = getattr(request, "session_id", None)
     sentinel_session = None
-    if request.session_id:
+    if req_session_id:
         sentinel_session = (
             db.query(SentinelTaskSessionModel)
             .filter(
-                SentinelTaskSessionModel.id == request.session_id,
+                SentinelTaskSessionModel.id == req_session_id,
                 SentinelTaskSessionModel.org_id == tenant.org_id,
             )
             .first()
@@ -297,7 +402,7 @@ def intercept_tool_call(
                 intent_id=request.intent_id or "",
                 risk_score=1.0,
                 execution_success=False,
-                execution_error=f"Task session '{request.session_id}' not found for tenant '{tenant.org_id}'",
+                execution_error=f"Task session '{req_session_id}' not found for tenant '{tenant.org_id}'",
                 timestamp=now,
             )
             db.commit()
@@ -310,7 +415,60 @@ def intercept_tool_call(
                 action_hash=action_hash,
                 risk_score=1.0,
                 risk_level=RiskLevel.CRITICAL,
-                session_id=request.session_id,
+                session_id=req_session_id,
+                intent_id=request.intent_id,
+                trace_id=trace_id,
+            )
+
+        # Check cross-agent authorization: session must belong to the requesting agent
+        if sentinel_session.agent_id and sentinel_session.agent_id != request.agent_id:
+            action_hash = ToolCall(
+                tool_name=request.tool_name,
+                agent_id=request.agent_id,
+                intent_id=request.intent_id or "",
+            ).canonical_hash()
+
+            audit = append_audit_event(
+                db=db,
+                org_id=tenant.org_id,
+                agent_id=request.agent_id,
+                tool_name=request.tool_name,
+                verdict=DecisionVerdict.DENY.value,
+                reason="CROSS_AGENT_SESSION_UNAUTHORIZED",
+                policy_id="",
+                action_hash=action_hash,
+                trace_id=trace_id,
+                intent_id=request.intent_id or "",
+                risk_score=1.0,
+                execution_success=False,
+                execution_error=f"Task session '{req_session_id}' belongs to agent '{sentinel_session.agent_id}', not '{request.agent_id}'",
+                timestamp=now,
+            )
+            db.commit()
+
+            try:
+                ThreatDetector.inspect_and_record(
+                    db=db,
+                    org_id=tenant.org_id,
+                    agent_id=request.agent_id,
+                    verdict="DENY",
+                    reason="CROSS_AGENT_SESSION_UNAUTHORIZED",
+                    trace_id=trace_id,
+                    tool_name=request.tool_name,
+                    now=now,
+                )
+            except Exception:
+                pass  # Threat recording failure must not convert DENY to ALLOW
+
+            return InterceptResponse(
+                verdict=DecisionVerdict.DENY,
+                allowed=False,
+                reason=f"CROSS_AGENT_SESSION_UNAUTHORIZED: Task session '{req_session_id}' belongs to agent '{sentinel_session.agent_id}', not '{request.agent_id}'",
+                decision_id=str(uuid.uuid4()),
+                action_hash=action_hash,
+                risk_score=1.0,
+                risk_level=RiskLevel.CRITICAL,
+                session_id=req_session_id,
                 intent_id=request.intent_id,
                 trace_id=trace_id,
             )
@@ -365,7 +523,7 @@ def intercept_tool_call(
                 action_hash=action_hash,
                 risk_score=1.0,
                 risk_level=RiskLevel.CRITICAL,
-                session_id=request.session_id,
+                session_id=req_session_id,
                 intent_id=request.intent_id,
                 trace_id=trace_id,
             )
@@ -391,7 +549,7 @@ def intercept_tool_call(
                 action_hash=action_hash,
                 risk_score=1.0,
                 risk_level=RiskLevel.CRITICAL,
-                session_id=request.session_id,
+                session_id=req_session_id,
                 intent_id=request.intent_id,
                 trace_id=trace_id,
             )
@@ -448,7 +606,7 @@ def intercept_tool_call(
                     action_hash=action_hash,
                     risk_score=1.0,
                     risk_level=RiskLevel.CRITICAL,
-                    session_id=request.session_id,
+                    session_id=req_session_id,
                     intent_id=request.intent_id,
                     trace_id=trace_id,
                 )
@@ -537,6 +695,64 @@ def intercept_tool_call(
         )
 
     sdk_policy = _build_sdk_policy(db_policy)
+
+    # 3b. Mandatory Task Session Verification (if mandated by active policy)
+    policy_constraints = getattr(db_policy, "parameter_constraints", {}) or {}
+    if (
+        isinstance(policy_constraints, dict)
+        and (policy_constraints.get("require_session") or policy_constraints.get("mandatory_session"))
+        and not req_session_id
+    ):
+        action_hash = ToolCall(
+            tool_name=request.tool_name,
+            agent_id=request.agent_id,
+            intent_id=request.intent_id or "",
+        ).canonical_hash()
+
+        audit = append_audit_event(
+            db=db,
+            org_id=tenant.org_id,
+            agent_id=request.agent_id,
+            tool_name=request.tool_name,
+            verdict=DecisionVerdict.DENY.value,
+            reason="MANDATORY_SESSION_REQUIRED",
+            policy_id=db_policy.id,
+            action_hash=action_hash,
+            trace_id=trace_id,
+            intent_id=request.intent_id or "",
+            risk_score=1.0,
+            execution_success=False,
+            execution_error=f"Policy '{db_policy.name}' mandates an active SENTINEL task session, but none was provided",
+            timestamp=now,
+        )
+        db.commit()
+
+        try:
+            ThreatDetector.inspect_and_record(
+                db=db,
+                org_id=tenant.org_id,
+                agent_id=request.agent_id,
+                verdict="DENY",
+                reason="MANDATORY_SESSION_REQUIRED",
+                trace_id=trace_id,
+                tool_name=request.tool_name,
+                now=now,
+            )
+        except Exception:
+            pass  # Threat recording failure must not convert DENY to ALLOW
+
+        return InterceptResponse(
+            verdict=DecisionVerdict.DENY,
+            allowed=False,
+            reason=f"MANDATORY_SESSION_REQUIRED: Policy '{db_policy.name}' mandates an active task session",
+            decision_id=str(uuid.uuid4()),
+            action_hash=action_hash,
+            risk_score=1.0,
+            risk_level=RiskLevel.CRITICAL,
+            policy_id=db_policy.id,
+            intent_id=request.intent_id,
+            trace_id=trace_id,
+        )
 
     # 4. Build SDK ToolCall
     tool_call = ToolCall(
@@ -693,7 +909,7 @@ def intercept_tool_call(
             risk_level=risk_level,
             approval_id=request.approval_id,
             intent_id=request.intent_id,
-            session_id=request.session_id,
+            session_id=req_session_id,
             trace_id=trace_id,
             policy_version=getattr(sdk_policy, "version", 1),
         )
@@ -790,7 +1006,7 @@ def intercept_tool_call(
         approval_id=created_approval_id,
         requires_approval=(decision.verdict == DecisionVerdict.REQUIRE_APPROVAL),
         intent_id=request.intent_id,
-        session_id=request.session_id,
+        session_id=req_session_id,
         trace_id=trace_id,
         policy_version=getattr(sdk_policy, "version", 1),
     )

@@ -24,6 +24,8 @@ class PolicyBase(BaseModel):
     allowed_recipients: list[str] = Field(default_factory=list)
     max_risk_level: RiskLevel = Field(default=RiskLevel.MEDIUM)
     max_sensitivity: int = Field(default=5, ge=0, le=10)
+    version: int = Field(default=1, ge=1)
+    parameter_constraints: dict[str, Any] = Field(default_factory=dict)
 
 
 class PolicyCreate(PolicyBase):
@@ -40,6 +42,8 @@ class PolicyUpdate(BaseModel):
     allowed_recipients: Optional[list[str]] = None
     max_risk_level: Optional[RiskLevel] = None
     max_sensitivity: Optional[int] = None
+    version: Optional[int] = None
+    parameter_constraints: Optional[dict[str, Any]] = None
 
 
 class PolicyResponse(PolicyBase):
@@ -187,6 +191,9 @@ class InterceptRequest(BaseModel):
     approval_id: Optional[str] = None
     intent_id: Optional[str] = None
     trace_id: Optional[str] = None
+    session_id: Optional[str] = None
+    approval_token: Optional[str] = None
+    nonce: Optional[str] = None
 
 
 class InterceptResponse(BaseModel):
@@ -195,10 +202,13 @@ class InterceptResponse(BaseModel):
     reason: str
     decision_id: str
     action_hash: str
-    risk_score: float
+    risk_score: float = 0.0
     risk_level: RiskLevel
+    policy_id: Optional[str] = None
+    requires_approval: bool = False
     approval_id: Optional[str] = None
     intent_id: Optional[str] = None
+    session_id: Optional[str] = None
     trace_id: Optional[str] = None
     policy_version: int = 1
     execution_result: Optional[Any] = None
@@ -278,7 +288,4 @@ class BenchmarkRunResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
-
-
-
 

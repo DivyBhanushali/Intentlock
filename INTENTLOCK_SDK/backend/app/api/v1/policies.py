@@ -233,6 +233,8 @@ def create_policy(
         allowed_recipients=policy_in.allowed_recipients,
         max_risk_level=policy_in.max_risk_level.value,
         max_sensitivity=policy_in.max_sensitivity,
+        version=getattr(policy_in, "version", 1) or 1,
+        parameter_constraints=getattr(policy_in, "parameter_constraints", {}) or {},
     )
     db.add(db_policy)
     db.commit()
