@@ -96,6 +96,7 @@ jobs:
           pytest INTENTLOCK_SDK/backend/tests/test_postgresql_rls_integration.py -v --tb=short
           pytest INTENTLOCK_SDK/backend/tests/test_postgresql_pool_security.py -v --tb=short
           pytest INTENTLOCK_SDK/backend/tests/test_api_intercept.py -v --tb=short
+          pytest INTENTLOCK_SDK/backend/tests/test_api_contract_regression.py -v --tb=short
 
   redis-distributed-verification:
     name: BLK-005 - Redis 7+ Distributed Concurrency & Fail-Closed Harness
