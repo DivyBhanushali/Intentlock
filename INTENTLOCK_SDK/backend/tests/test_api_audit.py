@@ -5,14 +5,16 @@ Tests for Audit and Stats route handlers.
 from app.api.v1.intercept import intercept_tool_call
 from app.api.v1.audit import list_audit_events, get_audit_stats
 from app.schemas.schemas import InterceptRequest
+from app.api.deps import TenantContext
 
 
 def test_audit_events_recorded_and_queried(db):
+    tenant = TenantContext(org_id="default-org", org_name="Default Org", plan="ENTERPRISE")
     req = InterceptRequest(
         agent_id="audit-agent",
         tool_name="unregistered_tool",
     )
-    intercept_tool_call(request=req, db=db)
+    intercept_tool_call(request=req, db=db, tenant=tenant)
 
     events = list_audit_events(agent_id="audit-agent", db=db)
     assert len(events) >= 1

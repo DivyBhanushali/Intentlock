@@ -9,8 +9,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
-from intentlock.agent import SecureAgent
-from intentlock.models import (
+from sictack.agent import SecureAgent
+from sictack.models import (
     Config,
     DecisionVerdict,
     IntentContext,
@@ -18,9 +18,9 @@ from intentlock.models import (
     RiskLevel,
     ToolCall,
 )
-from intentlock.policy_engine import PolicyEngine
-from intentlock.registry import ToolRegistry
-from intentlock.exceptions import PermissionDeniedError, IntentLockError
+from sictack.policy_engine import PolicyEngine
+from sictack.registry import ToolRegistry
+from sictack.exceptions import PermissionDeniedError, SictackError, IntentLockError
 from app.core.audit_chain import calculate_entry_hash, append_audit_event, verify_audit_chain
 
 

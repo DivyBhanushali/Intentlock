@@ -35,7 +35,7 @@ from app.db.models import PolicyModel, AgentModel
 from app.db.migrations import apply_migrations
 from app.api.v1.router import api_router
 
-logger = logging.getLogger("intentlock.server")
+logger = logging.getLogger("sictack.server")
 
 
 @asynccontextmanager

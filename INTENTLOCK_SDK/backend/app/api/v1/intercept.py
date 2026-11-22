@@ -28,7 +28,7 @@ from app.core.audit_chain import append_audit_event
 from app.core.threat_engine import ThreatDetector
 from sictack.coordination.state_sync import get_state_sync_coordinator
 
-from intentlock.models import (
+from sictack.models import (
     ApprovalStatus,
     DecisionVerdict,
     IntentContext,
@@ -37,10 +37,10 @@ from intentlock.models import (
     RiskLevel,
     ToolCall,
 )
-from intentlock.policy_engine import PolicyEngine
-from intentlock.risk_engine import RiskEngine
-from intentlock.registry import ToolRegistry
-from intentlock.sentinel.collector import redact_sensitive_data
+from sictack.policy_engine import PolicyEngine
+from sictack.risk_engine import RiskEngine
+from sictack.registry import ToolRegistry
+from sictack.sentinel.collector import redact_sensitive_data
 
 router = APIRouter(prefix="/intercept", tags=["Security Gateway"])
 

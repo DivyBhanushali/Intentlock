@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.db.models import ApprovalModel, AuditEventModel
 from app.schemas.schemas import ApprovalResponse, ApprovalActionRequest
-from intentlock.models import ApprovalStatus
+from sictack.models import ApprovalStatus
 
 router = APIRouter(prefix="/approvals", tags=["Approvals"])
 

@@ -10,7 +10,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from app.core.config import settings
 
-logger = logging.getLogger("intentlock.db")
+logger = logging.getLogger("sictack.db")
 
 # Dialect-aware connection arguments and connection pool settings
 connect_args: Dict[str, Any] = {}

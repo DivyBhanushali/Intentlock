@@ -13,7 +13,7 @@ from app.db.models import AuditEventModel, AgentModel
 from app.schemas.schemas import AuditEventResponse, AuditStatsResponse, AuditVerifyResponse
 from app.api.deps import get_current_tenant, TenantContext
 from app.core.audit_chain import verify_audit_chain
-from intentlock.models import DecisionVerdict
+from sictack.models import DecisionVerdict
 
 router = APIRouter(prefix="/audit", tags=["Audit"])
 

@@ -21,10 +21,10 @@ from sqlalchemy.orm import Session
 from app.api.deps import TenantContext, get_current_tenant, get_db, require_admin_user, require_authenticated_user
 from app.db.models import IntentContextModel, PolicyModel, PolicyVersionModel, UserModel
 from app.schemas.schemas import PolicyCreate, PolicyResponse, PolicyUpdate
-from intentlock.models import DecisionVerdict, IntentContext, Policy, RegisteredTool, RiskLevel, ToolCall
-from intentlock.policy_engine import PolicyEngine
-from intentlock.registry import ToolRegistry
-from intentlock.risk_engine import RiskEngine
+from sictack.models import DecisionVerdict, IntentContext, Policy, RegisteredTool, RiskLevel, ToolCall
+from sictack.policy_engine import PolicyEngine
+from sictack.registry import ToolRegistry
+from sictack.risk_engine import RiskEngine
 
 router = APIRouter(prefix="/policies", tags=["Policies"])
 

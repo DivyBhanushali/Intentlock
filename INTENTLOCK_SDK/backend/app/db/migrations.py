@@ -13,7 +13,7 @@ from typing import Set
 import sqlalchemy as sa
 from sqlalchemy.engine import Engine
 
-logger = logging.getLogger("intentlock.migrations")
+logger = logging.getLogger("sictack.migrations")
 
 SUPPORTED_DIALECTS: Set[str] = {"sqlite", "postgresql"}
 

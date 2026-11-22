@@ -81,6 +81,7 @@ def test_mcp_tool_call_allowed(mcp_proxy):
     assert resp["id"] == 2
     result = resp["result"]
     assert result["isError"] is False
+    assert result["_sictack"]["verdict"] == DecisionVerdict.ALLOW.value
     assert result["_intentlock"]["verdict"] == DecisionVerdict.ALLOW.value
     assert "Contents of /var/log/syslog" in result["content"][0]["text"]
 
@@ -100,8 +101,9 @@ def test_mcp_tool_call_denied(mcp_proxy):
     assert resp["id"] == 3
     result = resp["result"]
     assert result["isError"] is True
+    assert result["_sictack"]["verdict"] == DecisionVerdict.DENY.value
     assert result["_intentlock"]["verdict"] == DecisionVerdict.DENY.value
-    assert "INTENTLOCK_SECURITY_BLOCK" in result["content"][0]["text"]
+    assert "SICTACK_SECURITY_BLOCK" in result["content"][0]["text"]
 
 
 def test_mcp_tool_call_require_approval_flow(mcp_proxy):
@@ -118,8 +120,9 @@ def test_mcp_tool_call_require_approval_flow(mcp_proxy):
 
     result = resp["result"]
     assert result["isError"] is True
+    assert result["_sictack"]["verdict"] == DecisionVerdict.REQUIRE_APPROVAL.value
     assert result["_intentlock"]["verdict"] == DecisionVerdict.REQUIRE_APPROVAL.value
-    approval_id = result["_intentlock"]["approval_id"]
+    approval_id = result["_sictack"]["approval_id"]
     assert bool(approval_id)
     assert len(approval_id) >= 16
 
@@ -141,6 +144,7 @@ def test_mcp_tool_call_require_approval_flow(mcp_proxy):
     result_approved = resp_approved["result"]
 
     assert result_approved["isError"] is False
+    assert result_approved["_sictack"]["verdict"] == DecisionVerdict.ALLOW.value
     assert result_approved["_intentlock"]["verdict"] == DecisionVerdict.ALLOW.value
     assert "Wrote to /etc/config.json" in result_approved["content"][0]["text"]
 
