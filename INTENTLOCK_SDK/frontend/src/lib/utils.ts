@@ -1,4 +1,4 @@
-// INTENTLOCK – Shared utility functions
+// SICTACK – Shared utility functions
 
 import { type ClassValue, clsx } from "clsx";
 

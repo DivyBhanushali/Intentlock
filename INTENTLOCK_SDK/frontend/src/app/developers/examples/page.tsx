@@ -1,4 +1,4 @@
-// INTENTLOCK 2.0 – Complete Code Examples Page
+// SICTACK 1.0 – Complete Code Examples Page
 import { DeveloperLayout } from "@/components/developers/DeveloperLayout";
 import { CodeBlock } from "@/components/developers/CodeBlock";
 import { PreviousNextNavigation } from "@/components/developers/PreviousNextNavigation";
@@ -20,7 +20,7 @@ export default function CompleteExamplesPage() {
     { id: "scenario-6", title: "6. MCP JSON-RPC Server Gateway", level: 2 },
   ];
 
-  const scenario1Code = `from intentlock import SecureAgent, Config, Policy, ToolCall
+  const scenario1Code = `from sictack import SecureAgent, Config, Policy, ToolCall
 
 # 1. Define read-only policy
 policy = Policy(
@@ -48,8 +48,8 @@ result = agent.execute(call)
 print("Research Result:", result)
 # -> Research Result: Synthesized research findings for: quantum computing architectures`;
 
-  const scenario2Code = `from intentlock import SecureAgent, Config, Policy, ToolCall
-from intentlock.exceptions import PermissionDeniedError
+  const scenario2Code = `from sictack import SecureAgent, Config, Policy, ToolCall
+from sictack.exceptions import PermissionDeniedError
 
 # Policy only permits reading from public documentation directory
 policy = Policy(
@@ -87,8 +87,8 @@ except PermissionDeniedError as e:
     print(f"Blocked by policy: {e}")
     # -> Blocked by policy: Tool write_system_file is denied by policy`;
 
-  const scenario3Code = `from intentlock import SecureAgent, Config, Policy, ToolCall
-from intentlock.exceptions import ApprovalRequiredError
+  const scenario3Code = `from sictack import SecureAgent, Config, Policy, ToolCall
+from sictack.exceptions import ApprovalRequiredError
 
 policy = Policy(
     name="customer-outreach-policy",
@@ -127,8 +127,8 @@ except ApprovalRequiredError as e:
     print("Dispatch result:", confirmation)
     # -> Dispatch result: Message delivered to client@partner.com`;
 
-  const scenario4Code = `from intentlock import SecureAgent, Config, Policy
-from intentlock.integrations.langchain import secure_langchain_tool
+  const scenario4Code = `from sictack import SecureAgent, Config, Policy
+from sictack.integrations.langchain import secure_langchain_tool
 
 policy = Policy(
     name="langchain-guard-policy",
@@ -151,8 +151,8 @@ safe_math_tool = secure_langchain_tool(
 print(safe_math_tool.invoke({"a": 25, "b": 15}))
 # -> 40`;
 
-  const scenario5Code = `from intentlock import SecureAgent, Config, Policy
-from intentlock.integrations.langgraph import SecureGraphNode
+  const scenario5Code = `from sictack import SecureAgent, Config, Policy
+from sictack.integrations.langgraph import SecureGraphNode
 
 policy = Policy(
     name="graph-triage-policy",
@@ -173,13 +173,13 @@ secure_refund = SecureGraphNode(
 
 # In LangGraph workflows, calling the node returns a branched state dictionary
 output = secure_refund({"ticket_id": "TCK-9912", "amount": 150.0})
-print("Branch Status:", output["_intentlock_status"])
+print("Branch Status:", output["_sictack_status"])  # (also emits legacy '_intentlock_status')
 # -> Branch Status: REQUIRE_APPROVAL
 print("Pending Node:", output["_pending_node"])
 # -> Pending Node: refund_customer`;
 
-  const scenario6Code = `from intentlock import SecureAgent, Config, Policy
-from intentlock.integrations.mcp import MCPSecurityProxy
+  const scenario6Code = `from sictack import SecureAgent, Config, Policy
+from sictack.integrations.mcp import MCPSecurityProxy
 
 policy = Policy(
     name="mcp-gateway-policy",
@@ -209,123 +209,123 @@ print(response["result"]["content"][0]["text"])
         {/* Header */}
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-xs font-mono font-medium text-emerald-400">
+            <span className="rounded-md bg-[#EDF5F0] border border-[#234E39]/20 px-2 py-0.5 text-xs font-mono font-medium text-[#234E39]">
               Code Examples
             </span>
-            <span className="text-xs text-slate-500">6 Verified Scenarios</span>
+            <span className="text-xs text-[#787A80]">6 Verified Scenarios</span>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+          <h1 className="text-3xl font-extrabold tracking-tight text-[#18191B] sm:text-4xl">
             Real-World Enterprise Examples
           </h1>
-          <p className="mt-3 text-base text-slate-400 leading-relaxed">
+          <p className="mt-3 text-base text-[#56585D] leading-relaxed">
             Copy-pasteable, production-ready Python examples illustrating agent security boundaries, policy enforcement, approval tickets, and multi-framework integration.
           </p>
         </div>
 
         {/* Scenario 1 */}
-        <section id="scenario-1" className="space-y-4">
-          <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-            <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-400">1</span>
-            <h2 className="text-xl font-bold tracking-tight text-white">Read-Only Research Assistant</h2>
+        <section id="scenario-1" className="scroll-mt-20 space-y-4">
+          <div className="flex items-center gap-2 border-b border-[#E2E0D8] pb-2">
+            <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-[#234E39]">1</span>
+            <h2 className="text-xl font-bold tracking-tight text-[#18191B]">Read-Only Research Assistant</h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
-            <div className="rounded border border-slate-800 bg-[#090d16] p-2">
-              <span className="text-slate-500 block text-[10px]">RESOURCE</span>
-              <span className="text-slate-300">web_search</span>
+            <div className="rounded border border-[#E2E0D8] bg-[#F4F3EE] p-2">
+              <span className="text-[#787A80] block text-[10px]">RESOURCE</span>
+              <span className="text-[#56585D]">web_search</span>
             </div>
-            <div className="rounded border border-slate-800 bg-[#090d16] p-2">
-              <span className="text-slate-500 block text-[10px]">PERMISSION</span>
-              <span className="text-emerald-400">web:search</span>
+            <div className="rounded border border-[#E2E0D8] bg-[#F4F3EE] p-2">
+              <span className="text-[#787A80] block text-[10px]">PERMISSION</span>
+              <span className="text-[#234E39]">web:search</span>
             </div>
-            <div className="rounded border border-slate-800 bg-[#090d16] p-2">
-              <span className="text-slate-500 block text-[10px]">VERDICT</span>
-              <span className="text-emerald-400">ALLOW</span>
+            <div className="rounded border border-[#E2E0D8] bg-[#F4F3EE] p-2">
+              <span className="text-[#787A80] block text-[10px]">VERDICT</span>
+              <span className="text-[#234E39]">ALLOW</span>
             </div>
-            <div className="rounded border border-slate-800 bg-[#090d16] p-2">
-              <span className="text-slate-500 block text-[10px]">AUDIT</span>
-              <span className="text-slate-300">Logged to memory</span>
+            <div className="rounded border border-[#E2E0D8] bg-[#F4F3EE] p-2">
+              <span className="text-[#787A80] block text-[10px]">AUDIT</span>
+              <span className="text-[#56585D]">Logged to memory</span>
             </div>
           </div>
           <CodeBlock code={scenario1Code} language="python" filename="scenario_research_assistant.py" />
         </section>
 
         {/* Scenario 2 */}
-        <section id="scenario-2" className="space-y-4 pt-4">
-          <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-            <span className="rounded bg-rose-500/20 px-2 py-0.5 text-xs font-bold text-rose-400">2</span>
-            <h2 className="text-xl font-bold tracking-tight text-white">Restricted File-Access Agent</h2>
+        <section id="scenario-2" className="scroll-mt-20 space-y-4 pt-4">
+          <div className="flex items-center gap-2 border-b border-[#E2E0D8] pb-2">
+            <span className="rounded bg-rose-500/20 px-2 py-0.5 text-xs font-bold text-[#943425]">2</span>
+            <h2 className="text-xl font-bold tracking-tight text-[#18191B]">Restricted File-Access Agent</h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
-            <div className="rounded border border-slate-800 bg-[#090d16] p-2">
-              <span className="text-slate-500 block text-[10px]">RESOURCE</span>
-              <span className="text-slate-300">/etc/hosts</span>
+            <div className="rounded border border-[#E2E0D8] bg-[#F4F3EE] p-2">
+              <span className="text-[#787A80] block text-[10px]">RESOURCE</span>
+              <span className="text-[#56585D]">/etc/hosts</span>
             </div>
-            <div className="rounded border border-slate-800 bg-[#090d16] p-2">
-              <span className="text-slate-500 block text-[10px]">PERMISSION</span>
-              <span className="text-rose-400">file:write_system</span>
+            <div className="rounded border border-[#E2E0D8] bg-[#F4F3EE] p-2">
+              <span className="text-[#787A80] block text-[10px]">PERMISSION</span>
+              <span className="text-[#943425]">file:write_system</span>
             </div>
-            <div className="rounded border border-slate-800 bg-[#090d16] p-2">
-              <span className="text-slate-500 block text-[10px]">VERDICT</span>
-              <span className="text-rose-400">DENY</span>
+            <div className="rounded border border-[#E2E0D8] bg-[#F4F3EE] p-2">
+              <span className="text-[#787A80] block text-[10px]">VERDICT</span>
+              <span className="text-[#943425]">DENY</span>
             </div>
-            <div className="rounded border border-slate-800 bg-[#090d16] p-2">
-              <span className="text-slate-500 block text-[10px]">EXCEPTION</span>
-              <span className="text-rose-400">PermissionDeniedError</span>
+            <div className="rounded border border-[#E2E0D8] bg-[#F4F3EE] p-2">
+              <span className="text-[#787A80] block text-[10px]">EXCEPTION</span>
+              <span className="text-[#943425]">PermissionDeniedError</span>
             </div>
           </div>
           <CodeBlock code={scenario2Code} language="python" filename="scenario_file_access.py" />
         </section>
 
         {/* Scenario 3 */}
-        <section id="scenario-3" className="space-y-4 pt-4">
-          <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-            <span className="rounded bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-400">3</span>
-            <h2 className="text-xl font-bold tracking-tight text-white">Email Agent with Human Sign-Off</h2>
+        <section id="scenario-3" className="scroll-mt-20 space-y-4 pt-4">
+          <div className="flex items-center gap-2 border-b border-[#E2E0D8] pb-2">
+            <span className="rounded bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-[#8D5B18]">3</span>
+            <h2 className="text-xl font-bold tracking-tight text-[#18191B]">Email Agent with Human Sign-Off</h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
-            <div className="rounded border border-slate-800 bg-[#090d16] p-2">
-              <span className="text-slate-500 block text-[10px]">RESOURCE</span>
-              <span className="text-slate-300">send_external_email</span>
+            <div className="rounded border border-[#E2E0D8] bg-[#F4F3EE] p-2">
+              <span className="text-[#787A80] block text-[10px]">RESOURCE</span>
+              <span className="text-[#56585D]">send_external_email</span>
             </div>
-            <div className="rounded border border-slate-800 bg-[#090d16] p-2">
-              <span className="text-slate-500 block text-[10px]">PERMISSION</span>
-              <span className="text-amber-400">email:send_external</span>
+            <div className="rounded border border-[#E2E0D8] bg-[#F4F3EE] p-2">
+              <span className="text-[#787A80] block text-[10px]">PERMISSION</span>
+              <span className="text-[#8D5B18]">email:send_external</span>
             </div>
-            <div className="rounded border border-slate-800 bg-[#090d16] p-2">
-              <span className="text-slate-500 block text-[10px]">INITIAL VERDICT</span>
-              <span className="text-amber-400">REQUIRE_APPROVAL</span>
+            <div className="rounded border border-[#E2E0D8] bg-[#F4F3EE] p-2">
+              <span className="text-[#787A80] block text-[10px]">INITIAL VERDICT</span>
+              <span className="text-[#8D5B18]">REQUIRE_APPROVAL</span>
             </div>
-            <div className="rounded border border-slate-800 bg-[#090d16] p-2">
-              <span className="text-slate-500 block text-[10px]">TOKEN LIFECYCLE</span>
-              <span className="text-emerald-400">Single-use consumed</span>
+            <div className="rounded border border-[#E2E0D8] bg-[#F4F3EE] p-2">
+              <span className="text-[#787A80] block text-[10px]">TOKEN LIFECYCLE</span>
+              <span className="text-[#234E39]">Single-use consumed</span>
             </div>
           </div>
           <CodeBlock code={scenario3Code} language="python" filename="scenario_email_approval.py" />
         </section>
 
         {/* Scenario 4 */}
-        <section id="scenario-4" className="space-y-4 pt-4">
-          <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-            <span className="rounded bg-sky-500/20 px-2 py-0.5 text-xs font-bold text-sky-400">4</span>
-            <h2 className="text-xl font-bold tracking-tight text-white">LangChain Tool Protection</h2>
+        <section id="scenario-4" className="scroll-mt-20 space-y-4 pt-4">
+          <div className="flex items-center gap-2 border-b border-[#E2E0D8] pb-2">
+            <span className="rounded bg-sky-500/20 px-2 py-0.5 text-xs font-bold text-[#1D3557]">4</span>
+            <h2 className="text-xl font-bold tracking-tight text-[#18191B]">LangChain Tool Protection</h2>
           </div>
           <CodeBlock code={scenario4Code} language="python" filename="scenario_langchain.py" />
         </section>
 
         {/* Scenario 5 */}
-        <section id="scenario-5" className="space-y-4 pt-4">
-          <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
+        <section id="scenario-5" className="scroll-mt-20 space-y-4 pt-4">
+          <div className="flex items-center gap-2 border-b border-[#E2E0D8] pb-2">
             <span className="rounded bg-indigo-500/20 px-2 py-0.5 text-xs font-bold text-indigo-400">5</span>
-            <h2 className="text-xl font-bold tracking-tight text-white">LangGraph Stateful Review Workflow</h2>
+            <h2 className="text-xl font-bold tracking-tight text-[#18191B]">LangGraph Stateful Review Workflow</h2>
           </div>
           <CodeBlock code={scenario5Code} language="python" filename="scenario_langgraph.py" />
         </section>
 
         {/* Scenario 6 */}
-        <section id="scenario-6" className="space-y-4 pt-4">
-          <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
+        <section id="scenario-6" className="scroll-mt-20 space-y-4 pt-4">
+          <div className="flex items-center gap-2 border-b border-[#E2E0D8] pb-2">
             <span className="rounded bg-purple-500/20 px-2 py-0.5 text-xs font-bold text-purple-400">6</span>
-            <h2 className="text-xl font-bold tracking-tight text-white">MCP JSON-RPC Server Gateway</h2>
+            <h2 className="text-xl font-bold tracking-tight text-[#18191B]">MCP JSON-RPC Server Gateway</h2>
           </div>
           <CodeBlock code={scenario6Code} language="python" filename="scenario_mcp.py" />
         </section>

@@ -1,4 +1,4 @@
-// INTENTLOCK – Enterprise Client Authentication & Tenant Context
+// SICTACK – Enterprise Client Authentication & Tenant Context
 
 "use client";
 
@@ -33,20 +33,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Rehydrate token and user from localStorage
-    const savedToken = localStorage.getItem("intentlock_token");
-    const savedUser = localStorage.getItem("intentlock_user");
+    // Rehydrate token and user from localStorage on mount (supports sictack and legacy intentlock keys)
+    const savedToken = localStorage.getItem("sictack_token") || localStorage.getItem("intentlock_token");
+    const savedUser = localStorage.getItem("sictack_user") || localStorage.getItem("intentlock_user");
 
     if (savedToken && savedUser) {
       try {
-        setToken(savedToken);
-        setUser(JSON.parse(savedUser));
+        const parsed = JSON.parse(savedUser);
+        queueMicrotask(() => {
+          setToken(savedToken);
+          setUser(parsed);
+          setLoading(false);
+        });
       } catch {
+        localStorage.removeItem("sictack_token");
+        localStorage.removeItem("sictack_user");
         localStorage.removeItem("intentlock_token");
         localStorage.removeItem("intentlock_user");
+        queueMicrotask(() => {
+          setLoading(false);
+        });
+      }
+    } else {
+      queueMicrotask(() => {
+        setLoading(false);
+      });
+    }
+
+    // Handle cross-tab or API-triggered session expiration
+    function handleAuthExpiration() {
+      setToken(null);
+      setUser(null);
+    }
+
+    function handleStorage(e: StorageEvent) {
+      if ((e.key === "sictack_token" || e.key === "intentlock_token") && !e.newValue) {
+        handleAuthExpiration();
       }
     }
-    setLoading(false);
+
+    window.addEventListener("sictack:auth-expired", handleAuthExpiration);
+    window.addEventListener("intentlock:auth-expired", handleAuthExpiration);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("sictack:auth-expired", handleAuthExpiration);
+      window.removeEventListener("intentlock:auth-expired", handleAuthExpiration);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, []);
 
   async function login(email: string, password: string) {
@@ -64,6 +97,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await res.json();
     setToken(data.access_token);
     setUser(data.user);
+    localStorage.setItem("sictack_token", data.access_token);
+    localStorage.setItem("sictack_user", JSON.stringify(data.user));
     localStorage.setItem("intentlock_token", data.access_token);
     localStorage.setItem("intentlock_user", JSON.stringify(data.user));
   }
@@ -88,6 +123,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await res.json();
     setToken(data.access_token);
     setUser(data.user);
+    localStorage.setItem("sictack_token", data.access_token);
+    localStorage.setItem("sictack_user", JSON.stringify(data.user));
     localStorage.setItem("intentlock_token", data.access_token);
     localStorage.setItem("intentlock_user", JSON.stringify(data.user));
     return data.initial_api_key;
@@ -96,6 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   function logout() {
     setUser(null);
     setToken(null);
+    localStorage.removeItem("sictack_token");
+    localStorage.removeItem("sictack_user");
     localStorage.removeItem("intentlock_token");
     localStorage.removeItem("intentlock_user");
   }

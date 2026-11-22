@@ -1,4 +1,5 @@
-// INTENTLOCK 2.0 – Previous and Next Documentation Navigation
+// SICTACK 1.0 – Previous and Next Documentation Navigation
+// Direction A: Warm Editorial Software (Human-Centered Design)
 import Link from "next/link";
 
 interface PageLink {
@@ -17,19 +18,19 @@ export function PreviousNextNavigation({ prev, next }: PreviousNextNavigationPro
   }
 
   return (
-    <div className="mt-12 flex flex-col sm:flex-row gap-4 border-t border-slate-800/80 pt-6">
+    <div className="mt-12 flex flex-col sm:flex-row gap-4 border-t border-[#E2E0D8] pt-6 text-xs font-sans">
       {prev ? (
         <Link
           href={prev.href}
-          className="group flex-1 rounded-xl border border-slate-800/80 bg-[#0a0e17] p-4 transition-all hover:border-slate-700 hover:bg-slate-900/60"
+          className="group flex-1 rounded-xl border border-[#E2E0D8] bg-[#FFFFFF] p-4 transition-all hover:border-[#CECBC0] hover:shadow-[0_2px_8px_rgba(24,25,27,0.06)] shadow-[0_1px_3px_rgba(24,25,27,0.04)]"
         >
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400 group-hover:text-emerald-400">
+          <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#787A80] group-hover:text-[#1D3557] transition-colors">
             <svg className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             <span>Previous</span>
           </div>
-          <div className="mt-1 text-sm font-semibold text-slate-200 group-hover:text-white">
+          <div className="mt-1 text-sm font-semibold text-[#18191B] group-hover:text-[#1D3557]">
             {prev.title}
           </div>
         </Link>
@@ -40,15 +41,15 @@ export function PreviousNextNavigation({ prev, next }: PreviousNextNavigationPro
       {next ? (
         <Link
           href={next.href}
-          className="group flex-1 rounded-xl border border-slate-800/80 bg-[#0a0e17] p-4 text-right transition-all hover:border-slate-700 hover:bg-slate-900/60"
+          className="group flex-1 rounded-xl border border-[#E2E0D8] bg-[#FFFFFF] p-4 text-right transition-all hover:border-[#CECBC0] hover:shadow-[0_2px_8px_rgba(24,25,27,0.06)] shadow-[0_1px_3px_rgba(24,25,27,0.04)]"
         >
-          <div className="flex items-center justify-end gap-1.5 text-[11px] font-medium text-slate-400 group-hover:text-emerald-400">
+          <div className="flex items-center justify-end gap-1.5 text-[11px] font-medium text-[#787A80] group-hover:text-[#1D3557] transition-colors">
             <span>Next</span>
             <svg className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </div>
-          <div className="mt-1 text-sm font-semibold text-slate-200 group-hover:text-white">
+          <div className="mt-1 text-sm font-semibold text-[#18191B] group-hover:text-[#1D3557]">
             {next.title}
           </div>
         </Link>

@@ -1,4 +1,4 @@
-// INTENTLOCK 2.0 – OpenAPI Endpoint Reference Page
+// SICTACK 1.0 – OpenAPI Endpoint Reference Page
 "use client";
 
 import { useState, useMemo } from "react";
@@ -62,37 +62,37 @@ export default function ApiReferencePage() {
         {/* Header */}
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-xs font-mono font-medium text-emerald-400">
+            <span className="rounded-md bg-[#EDF5F0] border border-[#234E39]/20 px-2 py-0.5 text-xs font-mono font-medium text-[#234E39]">
               REST API
             </span>
-            <span className="text-xs text-slate-500">48 Operations Registered</span>
+            <span className="text-xs text-[#787A80]">48 Operations Registered</span>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+            <h1 className="text-3xl font-extrabold tracking-tight text-[#18191B] sm:text-4xl">
               OpenAPI Endpoint Reference
             </h1>
             <a
               href="https://intentlock-backend-ze2i.onrender.com/docs"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs font-medium text-slate-200 hover:border-slate-600 hover:text-white transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#E2E0D8] bg-slate-800/80 px-3 py-1.5 text-xs font-medium text-[#18191B] hover:border-slate-600 hover:text-[#18191B] transition-colors"
             >
               <span>Open Swagger UI</span>
-              <svg className="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-3.5 w-3.5 text-[#56585D]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
             </a>
           </div>
-          <p className="mt-3 text-base text-slate-400 leading-relaxed">
-            Deterministic reference for all 48 operations across the INTENTLOCK backend, auto-generated directly from the FastAPI application and OpenAPI 3.1.0 specification.
+          <p className="mt-3 text-base text-[#56585D] leading-relaxed">
+            Deterministic reference for all 48 operations across the SICTACK backend, auto-generated directly from the FastAPI application and OpenAPI 3.1.0 specification.
           </p>
         </div>
 
         {/* Search & Tag Filter Controls */}
-        <div className="space-y-4 rounded-xl border border-slate-800 bg-[#0a0e17] p-4">
+        <div className="space-y-4 rounded-xl border border-[#E2E0D8] bg-[#FFFFFF] p-4">
           <div className="relative">
             <svg
-              className="absolute left-3.5 top-3 h-4 w-4 text-slate-500"
+              className="absolute left-3.5 top-3 h-4 w-4 text-[#787A80]"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -109,18 +109,18 @@ export default function ApiReferencePage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by endpoint path, method, or summary (e.g. /intercept, policies, POST)..."
-              className="w-full rounded-lg border border-slate-700/80 bg-[#07090e] py-2 pl-10 pr-4 text-xs text-slate-200 placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none"
+              className="w-full rounded-lg border border-[#E2E0D8] bg-[#07090e] py-2 pl-10 pr-4 text-xs text-[#18191B] placeholder-slate-500 focus:border-[#234E39]/20 focus:outline-none"
             />
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
-            <span className="text-[11px] font-medium text-slate-400 mr-1">Resource Groups:</span>
+            <span className="text-[11px] font-medium text-[#56585D] mr-1">Resource Groups:</span>
             <button
               onClick={() => setSelectedTag("all")}
               className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                 selectedTag === "all"
-                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                  : "bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800"
+                  ? "bg-emerald-500/20 text-[#234E39] border border-[#234E39]/20"
+                  : "bg-slate-900 text-[#56585D] hover:text-[#18191B] border border-[#E2E0D8]"
               }`}
             >
               All ({API_ENDPOINTS.length})
@@ -133,8 +133,8 @@ export default function ApiReferencePage() {
                   onClick={() => setSelectedTag(tag)}
                   className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                     selectedTag === tag
-                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                      : "bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800"
+                      ? "bg-emerald-500/20 text-[#234E39] border border-[#234E39]/20"
+                      : "bg-slate-900 text-[#56585D] hover:text-[#18191B] border border-[#E2E0D8]"
                   }`}
                 >
                   {tag} ({count})
@@ -145,14 +145,14 @@ export default function ApiReferencePage() {
         </div>
 
         {/* Results Info */}
-        <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+        <div className="flex items-center justify-between text-xs text-[#56585D] px-1">
           <span>
-            Showing <strong className="text-slate-200">{filteredEndpoints.length}</strong> of {API_ENDPOINTS.length} operations
+            Showing <strong className="text-[#18191B]">{filteredEndpoints.length}</strong> of {API_ENDPOINTS.length} operations
           </span>
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="text-emerald-400 hover:underline"
+              className="text-[#234E39] hover:underline"
             >
               Clear search
             </button>
@@ -171,10 +171,10 @@ export default function ApiReferencePage() {
             const tagId = `tag-${groupTag.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
             return (
               <section key={groupTag} id={tagId} className="space-y-4 pt-6">
-                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                <div className="flex items-center justify-between border-b border-[#E2E0D8] pb-2">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold tracking-tight text-white">{groupTag}</h2>
-                    <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-mono font-medium text-slate-300">
+                    <h2 className="text-xl font-bold tracking-tight text-[#18191B]">{groupTag}</h2>
+                    <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-mono font-medium text-[#56585D]">
                       {endpoints.length} {endpoints.length === 1 ? "operation" : "operations"}
                     </span>
                   </div>
@@ -184,9 +184,9 @@ export default function ApiReferencePage() {
                   {endpoints.map((ep) => (
                     <div key={`${ep.method}-${ep.path}`} className="space-y-1">
                       {ep.requiredRole && ep.requiredRole !== "None" && (
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 px-1">
-                          <span className="text-slate-500 font-mono">RBAC Role Required:</span>
-                          <span className="font-mono text-emerald-400 font-semibold">{ep.requiredRole}</span>
+                        <div className="flex items-center gap-1.5 text-[11px] text-[#56585D] px-1">
+                          <span className="text-[#787A80] font-mono">RBAC Role Required:</span>
+                          <span className="font-mono text-[#234E39] font-semibold">{ep.requiredRole}</span>
                         </div>
                       )}
                       <EndpointCard

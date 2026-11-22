@@ -1,4 +1,5 @@
-// INTENTLOCK 2.0 – Accessible In-Memory Documentation Search Modal
+// SICTACK 1.0 – Accessible In-Memory Documentation Search Modal
+// Direction A: Warm Editorial Software (Human-Centered Design)
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -118,13 +119,13 @@ export function DocumentationSearch() {
         aria-label="Search documentation"
         aria-haspopup="dialog"
         aria-expanded={isOpen}
-        className="flex items-center gap-2 rounded-lg border border-slate-800 bg-[#0a0e17] px-3 py-1.5 text-xs text-slate-400 hover:border-slate-700 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition-colors w-full sm:w-56"
+        className="flex items-center gap-2 rounded-lg border border-[#E2E0D8] bg-[#FFFFFF] px-3 py-1.5 text-xs text-[#787A80] hover:border-[#CECBC0] hover:text-[#18191B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D3557] transition-colors w-full sm:w-56 cursor-pointer shadow-xs"
       >
-        <svg className="h-3.5 w-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <svg className="h-3.5 w-3.5 text-[#787A80]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
         <span className="flex-1 text-left">Search documentation...</span>
-        <kbd className="hidden sm:inline-block rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-[10px] font-mono text-slate-500">
+        <kbd className="hidden sm:inline-block rounded border border-[#E2E0D8] bg-[#F4F3EE] px-1.5 py-0.5 text-[10px] font-mono text-[#787A80]">
           ⌘K
         </kbd>
       </button>
@@ -142,7 +143,7 @@ export function DocumentationSearch() {
           role="dialog"
           aria-modal="true"
           aria-label="Documentation search"
-          className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16 sm:pt-24 bg-black/70 backdrop-blur-sm motion-safe:transition-opacity motion-reduce:transition-none"
+          className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16 sm:pt-24 bg-black/40 backdrop-blur-xs motion-safe:transition-opacity motion-reduce:transition-none"
         >
           {/* Backdrop overlay */}
           <div
@@ -151,10 +152,10 @@ export function DocumentationSearch() {
             aria-hidden="true"
           />
 
-          <div className="relative w-full max-w-xl rounded-2xl border border-slate-800 bg-[#0c1019] shadow-2xl overflow-hidden z-10 motion-safe:transition-transform motion-reduce:transition-none">
+          <div className="relative w-full max-w-xl rounded-2xl border border-[#E2E0D8] bg-[#FFFFFF] shadow-2xl overflow-hidden z-10 motion-safe:transition-transform motion-reduce:transition-none">
             {/* Input Header */}
-            <div className="flex items-center border-b border-slate-800 px-4 py-3">
-              <svg className="h-4 w-4 text-emerald-400 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <div className="flex items-center border-b border-[#E2E0D8] px-4 py-3">
+              <svg className="h-4 w-4 text-[#1D3557] mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -168,14 +169,14 @@ export function DocumentationSearch() {
                 onChange={handleQueryChange}
                 onKeyDown={handleInputKeyDown}
                 placeholder="Search topics, SDK methods, REST endpoints..."
-                className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+                className="w-full bg-transparent text-sm text-[#18191B] placeholder:text-[#787A80] focus:outline-none"
               />
               <button
                 onClick={handleClose}
                 aria-label="Close search dialog"
-                className="rounded-md p-1 text-slate-500 hover:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                className="rounded-md p-1 text-[#787A80] hover:text-[#18191B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D3557]"
               >
-                <kbd className="rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-[10px] font-mono">
+                <kbd className="rounded border border-[#E2E0D8] bg-[#F4F3EE] px-1.5 py-0.5 text-[10px] font-mono text-[#56585D]">
                   ESC
                 </kbd>
               </button>
@@ -190,11 +191,11 @@ export function DocumentationSearch() {
               className="max-h-80 overflow-y-auto p-2"
             >
               {query.trim() === "" ? (
-                <div className="p-6 text-center text-xs text-slate-500">
-                  Type a command, method name (e.g. <span className="font-mono text-slate-400">register_tool</span>), or endpoint (e.g. <span className="font-mono text-slate-400">/intercept</span>) to search.
+                <div className="p-6 text-center text-xs text-[#787A80]">
+                  Type a command, method name (e.g. <span className="font-mono text-[#18191B]">register_tool</span>), or endpoint (e.g. <span className="font-mono text-[#18191B]">/intercept</span>) to search.
                 </div>
               ) : filteredResults.length === 0 ? (
-                <div className="p-6 text-center text-xs text-slate-400">
+                <div className="p-6 text-center text-xs text-[#56585D]">
                   No matching documentation topics found for &ldquo;{query}&rdquo;.
                 </div>
               ) : (
@@ -212,19 +213,19 @@ export function DocumentationSearch() {
                         onMouseEnter={() => setSelectedIndex(index)}
                         className={`block rounded-lg p-3 transition-colors ${
                           isSelected
-                            ? "bg-slate-800/80 border border-emerald-500/30 text-white"
-                            : "hover:bg-slate-800/40 text-slate-300"
+                            ? "bg-[#1D3557]/10 text-[#18191B]"
+                            : "hover:bg-[#F4F3EE] text-[#56585D]"
                         }`}
                       >
                         <div className="flex items-center justify-between text-xs">
-                          <span className={`font-semibold ${isSelected ? "text-emerald-400" : "text-slate-200"}`}>
+                          <span className={`font-semibold ${isSelected ? "text-[#1D3557]" : "text-[#18191B]"}`}>
                             {item.title}
                           </span>
-                          <span className="rounded bg-slate-800 px-2 py-0.5 text-[10px] text-slate-400 font-mono">
+                          <span className="rounded bg-[#F4F3EE] px-2 py-0.5 text-[10px] text-[#56585D] font-mono border border-[#E2E0D8]">
                             {item.category}
                           </span>
                         </div>
-                        <p className="mt-1 text-xs text-slate-400 line-clamp-1">
+                        <p className="mt-1 text-xs text-[#56585D] line-clamp-1">
                           {item.summary}
                         </p>
                       </Link>
@@ -235,13 +236,13 @@ export function DocumentationSearch() {
             </div>
 
             {/* Footer with keyboard guidance */}
-            <div className="border-t border-slate-800/80 bg-[#090d15] px-4 py-2 text-[11px] text-slate-500 flex flex-wrap items-center justify-between gap-2">
+            <div className="border-t border-[#282A30] bg-[#16171B] px-4 py-2 text-[11px] text-[#72747D] flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-3">
-                <span><kbd className="font-mono rounded border border-slate-800 bg-slate-900 px-1 text-[10px]">↑↓</kbd> Navigate</span>
-                <span><kbd className="font-mono rounded border border-slate-800 bg-slate-900 px-1 text-[10px]">↵</kbd> Select</span>
-                <span><kbd className="font-mono rounded border border-slate-800 bg-slate-900 px-1 text-[10px]">ESC</kbd> Close</span>
+                <span><kbd className="font-mono rounded border border-[#2E3037] bg-[#222328] px-1 text-[10px]">↑↓</kbd> Navigate</span>
+                <span><kbd className="font-mono rounded border border-[#2E3037] bg-[#222328] px-1 text-[10px]">↵</kbd> Select</span>
+                <span><kbd className="font-mono rounded border border-[#2E3037] bg-[#222328] px-1 text-[10px]">ESC</kbd> Close</span>
               </div>
-              <span className="text-[10px] text-slate-600">Indexed Metadata Search</span>
+              <span className="text-[10px] font-mono text-[#72747D]">Indexed Documentation</span>
             </div>
           </div>
         </div>

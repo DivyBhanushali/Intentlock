@@ -1,4 +1,4 @@
-// INTENTLOCK 2.0 – Centralized Developer Portal Navigation & Search Config
+// SICTACK 1.0 – Centralized Developer Portal Navigation & Search Config
 
 import { NavSection, SearchDocItem } from "@/components/developers/types";
 
@@ -14,7 +14,14 @@ export const DOCS_NAVIGATION: NavSection[] = [
     ],
   },
   {
-    title: "Python SDK (v0.1.0)",
+    title: "Security Engines",
+    items: [
+      { title: "SICTACK CORE Gateway", href: "/developers/core", badge: "CORE" },
+      { title: "SICTACK SENTINEL Radar", href: "/developers/sentinel", badge: "SENTINEL" },
+    ],
+  },
+  {
+    title: "Python SDK (v1.0.0)",
     items: [
       { title: "SDK Overview", href: "/developers/sdk" },
       { title: "Initialization & Setup", href: "/developers/sdk/initialization" },
@@ -28,7 +35,13 @@ export const DOCS_NAVIGATION: NavSection[] = [
     items: [
       { title: "API Overview & Protocols", href: "/developers/api" },
       { title: "Authentication & Keys", href: "/developers/api/authentication" },
-      { title: "Endpoints Reference", href: "/developers/api/reference", badge: "48 Ops" },
+      { title: "Endpoints Reference", href: "/developers/api/reference", badge: "84 Ops" },
+    ],
+  },
+  {
+    title: "Hands-On Security Labs",
+    items: [
+      { title: "10 Hands-On Security Labs", href: "/developers/labs", badge: "10 Labs" },
     ],
   },
   {
@@ -48,7 +61,7 @@ export const DOCS_NAVIGATION: NavSection[] = [
       { title: "Security Architecture & Audit", href: "/developers/security" },
       { title: "Production Deployment", href: "/developers/deployment" },
       { title: "Troubleshooting & FAQs", href: "/developers/troubleshooting" },
-      { title: "Changelog & Releases", href: "/developers/changelog", badge: "v0.1.0" },
+      { title: "Changelog & Releases", href: "/developers/changelog", badge: "v1.0.0" },
     ],
   },
 ];
@@ -58,22 +71,22 @@ export const DOCS_SEARCH_INDEX: SearchDocItem[] = [
     title: "Developer Overview",
     href: "/developers",
     category: "Getting Started",
-    keywords: ["overview", "introduction", "middleware", "zero-trust", "execution boundary"],
-    summary: "High-level overview of the INTENTLOCK AI agent security middleware and SDK.",
+    keywords: ["overview", "introduction", "middleware", "zero-trust", "execution boundary", "sictack"],
+    summary: "High-level overview of the SICTACK AI agent runtime security infrastructure and SDK.",
   },
   {
     title: "5-Minute Quickstart",
     href: "/developers/quickstart",
     category: "Getting Started",
-    keywords: ["quickstart", "start", "first tool", "secureagent", "hello world", "install"],
-    summary: "Protect your first AI agent tool in under five minutes using the Python SDK.",
+    keywords: ["quickstart", "start", "first tool", "sictack", "secureagent", "hello world", "install"],
+    summary: "Protect your first AI agent tool in under five minutes using the sictack Python SDK.",
   },
   {
     title: "Installation & Setup",
     href: "/developers/installation",
     category: "Getting Started",
-    keywords: ["installation", "pip", "git", "wheel", "python 3.12", "setup"],
-    summary: "Install the intentlock-sdk from repository or wheel and verify your environment.",
+    keywords: ["installation", "pip", "pypi", "sictack", "intentlock-sdk", "wheel", "python 3.12", "setup"],
+    summary: "Install the sictack package from PyPI and verify your environment.",
   },
   {
     title: "Core Concepts",
@@ -93,15 +106,15 @@ export const DOCS_SEARCH_INDEX: SearchDocItem[] = [
     title: "Python SDK Overview",
     href: "/developers/sdk",
     category: "Python SDK",
-    keywords: ["sdk", "python", "intentlock-sdk", "classes", "methods", "in-process"],
-    summary: "Overview of the public Python SDK interfaces and execution modes.",
+    keywords: ["sdk", "python", "sictack", "intentlock-sdk", "classes", "methods", "in-process"],
+    summary: "Overview of the public SICTACK Python SDK interfaces and execution modes.",
   },
   {
     title: "SDK Initialization",
     href: "/developers/sdk/initialization",
     category: "Python SDK",
-    keywords: ["initialization", "secureagent", "intentlockclient", "api_key", "base_url", "config"],
-    summary: "Instantiate SecureAgent for local guardrails or IntentLockClient for remote gateway.",
+    keywords: ["initialization", "sictack", "secureagent", "sictackclient", "api_key", "base_url", "config"],
+    summary: "Instantiate Sictack / SecureAgent for runtime guardrails or SictackClient for remote gateway.",
   },
   {
     title: "Tool Protection & Integrations",
@@ -121,36 +134,36 @@ export const DOCS_SEARCH_INDEX: SearchDocItem[] = [
     title: "Exceptions & Fail-Closed Errors",
     href: "/developers/sdk/errors",
     category: "Python SDK",
-    keywords: ["exceptions", "errors", "policyviolationerror", "approvalrequirederror", "fail-closed"],
+    keywords: ["exceptions", "errors", "policyviolationerror", "approvalrequirederror", "fail-closed", "sictackerror"],
     summary: "Reference guide for all SDK exception types and fail-closed handling semantics.",
   },
   {
     title: "REST API Overview",
     href: "/developers/api",
     category: "REST API",
-    keywords: ["api", "rest", "fastapi", "endpoints", "openapi", "swagger"],
-    summary: "Introduction to the INTENTLOCK v1 REST API and multi-tenant conventions.",
+    keywords: ["api", "rest", "fastapi", "endpoints", "openapi", "swagger", "sictack"],
+    summary: "Introduction to the SICTACK v1 REST API and multi-tenant conventions.",
   },
   {
     title: "Authentication & Keys",
     href: "/developers/api/authentication",
     category: "REST API",
-    keywords: ["auth", "authentication", "api key", "ilk_live", "jwt", "bearer", "rbac"],
-    summary: "Generate and authenticate with M2M agent API keys and user JWT tokens.",
+    keywords: ["auth", "authentication", "api key", "sck_live", "ilk_live", "jwt", "bearer", "rbac"],
+    summary: "Generate and authenticate with M2M agent API keys (sck_live_) and user JWT tokens.",
   },
   {
     title: "Endpoints Reference",
     href: "/developers/api/reference",
     category: "REST API",
     keywords: ["endpoints", "reference", "intercept", "intents", "policies", "audit", "curl", "openapi"],
-    summary: "Comprehensive interactive documentation for all 48 registered REST API operations.",
+    summary: "Comprehensive interactive documentation for all 64 registered REST API operations.",
   },
   {
     title: "Framework Integrations Overview",
     href: "/developers/integrations",
     category: "Integrations",
     keywords: ["integrations", "ecosystem", "frameworks", "adapters", "langchain", "langgraph", "mcp"],
-    summary: "Overview of official INTENTLOCK adapters for LangChain, LangGraph, and Model Context Protocol.",
+    summary: "Overview of official SICTACK adapters for LangChain, LangGraph, and Model Context Protocol.",
   },
   {
     title: "LangChain Tool Security",
@@ -192,7 +205,7 @@ export const DOCS_SEARCH_INDEX: SearchDocItem[] = [
     href: "/developers/deployment",
     category: "Operations",
     keywords: ["deployment", "production", "render", "supabase", "docker", "environment"],
-    summary: "Best practices for deploying INTENTLOCK behind Render, Supabase, and Docker.",
+    summary: "Best practices for deploying SICTACK behind Render, Supabase, and Docker.",
   },
   {
     title: "Troubleshooting & FAQs",
@@ -212,8 +225,8 @@ export const DOCS_SEARCH_INDEX: SearchDocItem[] = [
     title: "Changelog & Releases",
     href: "/developers/changelog",
     category: "Guides",
-    keywords: ["changelog", "releases", "v0.1.0", "v2.0", "updates", "semantic versioning"],
-    summary: "Official release notes for the INTENTLOCK SDK and platform architecture.",
+    keywords: ["changelog", "releases", "v1.0.0", "updates", "semantic versioning", "sictack"],
+    summary: "Official release notes for the SICTACK SDK and platform architecture.",
   },
   {
     title: "Live Security Operations Playground",
@@ -221,5 +234,26 @@ export const DOCS_SEARCH_INDEX: SearchDocItem[] = [
     category: "Interactive Tools",
     keywords: ["test", "live", "soc", "playground", "console", "real-time", "interactive"],
     summary: "Live interactive security console for testing custom policies against registered agents on the active tenant backend.",
+  },
+  {
+    title: "SICTACK CORE Deterministic Gateway Developer Guide",
+    href: "/developers/core",
+    category: "Security Engines",
+    keywords: ["core", "deterministic", "gateway", "parameter constraints", "policy version", "ttl", "sha256"],
+    summary: "Technical guide to SICTACK CORE deterministic policy evaluation, parameter constraints, and cryptographic audit.",
+  },
+  {
+    title: "SICTACK SENTINEL Behavioral Engine Developer Guide",
+    href: "/developers/sentinel",
+    category: "Security Engines",
+    keywords: ["sentinel", "behavioral", "surveillance", "task session", "anomaly detectors", "risk engine", "containment"],
+    summary: "Technical guide to SICTACK SENTINEL continuous runtime surveillance, anomaly detectors, and autonomous containment.",
+  },
+  {
+    title: "10 Hands-On Security Labs",
+    href: "/developers/labs",
+    category: "Hands-On Security Labs",
+    keywords: ["labs", "hands-on", "tutorial", "practice", "tool protection", "approvals", "objective guardian", "containment", "simulation", "provenance", "integrity", "audit"],
+    summary: "Ten interactive, reproducible developer security laboratories covering CORE tool gating, human approvals, delegation, behavioral radar, data provenance, execution integrity, and audit verification.",
   },
 ];

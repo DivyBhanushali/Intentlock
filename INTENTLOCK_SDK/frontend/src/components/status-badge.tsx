@@ -1,35 +1,54 @@
-// INTENTLOCK – Status badge for approval status
+// SICTACK – Status Badge for Human Approval Tokens
+// Concept A: Editorial Infrastructure
 
 import type { ApprovalStatus } from "@/lib/api";
 
-const statusStyles: Record<ApprovalStatus, string> = {
-  PENDING: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-  APPROVED: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
-  REJECTED: "bg-rose-500/10 text-rose-400 border-rose-500/30",
-  EXPIRED: "bg-slate-500/10 text-slate-400 border-slate-500/30",
+const statusConfig: Record<
+  ApprovalStatus,
+  {
+    classes: string;
+    dotColor: string;
+    label: string;
+  }
+> = {
+  PENDING: {
+    classes: "text-[#8D5B18] bg-[#FEF6EC] border-[#FBE3C6]",
+    dotColor: "bg-[#8D5B18]",
+    label: "PENDING REVIEW",
+  },
+  APPROVED: {
+    classes: "text-[#234E39] bg-[#EDF5F0] border-[#D4E8DC]",
+    dotColor: "bg-[#234E39]",
+    label: "APPROVED",
+  },
+  REJECTED: {
+    classes: "text-[#943425] bg-[#FDF1EF] border-[#F8D5D0]",
+    dotColor: "bg-[#943425]",
+    label: "REJECTED",
+  },
+  EXPIRED: {
+    classes: "text-[#787E81] bg-[#F2F4F3] border-[#E4E9E8]",
+    dotColor: "bg-[#787E81]",
+    label: "EXPIRED",
+  },
 };
 
 export function StatusBadge({ status }: { status: ApprovalStatus }) {
+  const config = statusConfig[status] || statusConfig.EXPIRED;
   const isPending = status === "PENDING";
-  const isApproved = status === "APPROVED";
-  const isRejected = status === "REJECTED";
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 font-mono text-[11px] font-semibold tracking-wide ${statusStyles[status]}`}
+      className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider border ${config.classes}`}
     >
       <span
-        className={`h-1.5 w-1.5 rounded-full ${
-          isPending
-            ? "bg-amber-400 animate-pulse"
-            : isApproved
-            ? "bg-emerald-400"
-            : isRejected
-            ? "bg-rose-400"
-            : "bg-slate-400"
+        className={`h-1.5 w-1.5 rounded-full shrink-0 ${config.dotColor} ${
+          isPending ? "animate-pulse" : ""
         }`}
+        aria-hidden="true"
       />
-      {status}
+      <span>{config.label}</span>
     </span>
   );
 }
+

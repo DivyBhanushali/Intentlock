@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
-import { Navbar } from "@/components/navbar";
 import { AuthProvider } from "@/lib/auth";
+import { AppNavigationShell } from "@/components/nav/AppNavigationShell";
 import "./globals.css";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
-  title: "INTENTLOCK · Enterprise Security Operations Center",
+  title: "SICTACK · The Security Infrastructure for the Autonomous AI Economy",
   description:
-    "Zero-Trust Security Middleware & IAM Execution Guard for Autonomous AI Agents",
+    "SICTACK — Secure the action. Protect the intention. Runtime authorization, threat detection, and session security for autonomous AI agents.",
 };
 
 export default function RootLayout({
@@ -15,13 +17,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className="il-body">
+    <html lang="en" data-theme="warm-light">
+      <body className="il-body bg-[#FBFBF9] text-[#18191B]">
         <AuthProvider>
-          <Navbar />
-          <main className="il-main-container">
-            {children}
-          </main>
+          <AppNavigationShell>{children}</AppNavigationShell>
         </AuthProvider>
       </body>
     </html>

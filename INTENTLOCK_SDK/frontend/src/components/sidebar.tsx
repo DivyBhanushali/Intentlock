@@ -1,18 +1,17 @@
-// INTENTLOCK – Developer Security Sidebar
+// SICTACK – Developer Security Sidebar
+// Direction A: Warm Editorial Software (Human-Centered Design)
 
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ShieldIcon,
   ChartIcon,
   UsersIcon,
   DocumentIcon,
   ClockIcon,
   ListIcon,
   BeakerIcon,
-  LockIcon,
 } from "@/components/icons";
 
 const navItems = [
@@ -28,32 +27,32 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-[#1a2233] bg-[#0a0e17]">
+    <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-[#282A30] bg-[#121316] text-[#EDEDEB] font-sans">
       {/* Brand Header */}
-      <div className="flex h-16 items-center justify-between border-b border-[#1a2233] px-5">
+      <div className="flex h-16 items-center justify-between border-b border-[#282A30] px-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-            <LockIcon size={16} />
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#1D3557] border border-[#2E486F] text-white">
+            <span className="font-mono font-bold text-xs">SC</span>
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-sm font-bold tracking-tight text-slate-100">
-                INTENTLOCK
+              <span className="text-sm font-semibold tracking-tight text-[#EDEDEB]">
+                SICTACK
               </span>
-              <span className="rounded bg-emerald-500/15 px-1 py-0.2 text-[9px] font-semibold text-emerald-400 border border-emerald-500/30">
+              <span className="rounded bg-[#1A1B1F] px-1.5 py-0.2 text-[9px] font-mono font-semibold text-[#A6A8B0] border border-[#2E3037]">
                 SDK
               </span>
             </div>
-            <p className="text-[10px] text-slate-500 font-medium tracking-wide">
-              AGENT SECURITY LAYER
+            <p className="text-[10px] text-[#72747D] font-mono tracking-wide">
+              RUNTIME SECURITY
             </p>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+      <nav aria-label="Sidebar Navigation" className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+        <div className="px-3 pb-2 text-[10px] font-mono font-semibold uppercase tracking-wider text-[#72747D]">
           Security Console
         </div>
         {navItems.map((item) => {
@@ -66,47 +65,47 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`group flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium transition-all ${
+              aria-current={isActive ? "page" : undefined}
+              className={`group flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B8AC4] ${
                 isActive
-                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                  : "text-slate-400 hover:bg-[#121824] hover:text-slate-200 border border-transparent"
+                  ? "bg-[#1A1B1F] text-[#EDEDEB] border border-[#2E3037] shadow-xs"
+                  : "text-[#A6A8B0] hover:bg-[#1A1B1F]/60 hover:text-[#EDEDEB] border border-transparent"
               }`}
             >
               <Icon
                 size={16}
-                className={isActive ? "text-emerald-400" : "text-slate-500 group-hover:text-slate-300"}
+                className={isActive ? "text-[#5B8AC4]" : "text-[#72747D] group-hover:text-[#A6A8B0]"}
               />
               <div className="flex flex-col">
-                <span className="font-semibold">{item.label}</span>
+                <span className={isActive ? "font-semibold text-white" : ""}>{item.label}</span>
               </div>
             </Link>
           );
         })}
       </nav>
 
-      {/* Engine Status Card in Footer */}
-      <div className="border-t border-[#1a2233] p-4 bg-[#07090e]/60">
-        <div className="rounded-lg border border-[#1a2233] bg-[#0d111a] p-3 text-[11px]">
+      {/* System Status in Footer */}
+      <div className="border-t border-[#282A30] p-4 bg-[#16171B]">
+        <div className="rounded-lg border border-[#2E3037] bg-[#1A1B1F] p-3 text-[11px] space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-slate-400 font-medium">Gateway Guard</span>
-            <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              ACTIVE
+            <span className="text-[#A6A8B0] font-medium">Policy Engine</span>
+            <span className="text-[10px] font-mono font-semibold text-[#488B68]">
+              DETERMINISTIC
             </span>
           </div>
-          <div className="mt-1.5 text-[10px] text-slate-500 font-mono">
-            Fail-Closed Mode: ON
+          <div className="text-[10px] text-[#72747D] font-mono">
+            Fail-Closed Mode: ACTIVE
           </div>
-          <div className="mt-2 pt-2 border-t border-[#1a2233] flex justify-between items-center text-[10px]">
+          <div className="pt-2 border-t border-[#282A30] flex justify-between items-center text-[10px]">
             <a
               href="https://intentlock-backend-ze2i.onrender.com/docs"
               target="_blank"
               rel="noreferrer"
-              className="text-slate-400 hover:text-emerald-400 transition-colors"
+              className="text-[#72747D] hover:text-[#A6A8B0] transition-colors"
             >
-              API Swagger Docs ↗
+              API OpenAPI Schema ↗
             </a>
-            <span className="text-slate-600">v0.1.0</span>
+            <span className="font-mono text-[#72747D]">Python 3.12+</span>
           </div>
         </div>
       </div>

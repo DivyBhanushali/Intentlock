@@ -1,4 +1,4 @@
-// INTENTLOCK 2.0 – Developer Portal Types & Interfaces
+// SICTACK 1.0 – Developer Portal Types & Interfaces
 
 export type CalloutType = "info" | "warning" | "tip" | "danger";
 

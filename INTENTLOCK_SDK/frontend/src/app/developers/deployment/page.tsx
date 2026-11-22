@@ -1,4 +1,4 @@
-// INTENTLOCK 2.0 – Production Deployment Guide
+// SICTACK 1.0 – Production Deployment Guide
 "use client";
 
 import { DeveloperLayout } from "@/components/developers/DeveloperLayout";
@@ -28,7 +28,7 @@ export default function ProductionDeploymentPage() {
 
   const backendEnvExample = `# Backend Environment Configuration (.env)
 # Application Settings
-APP_NAME=INTENTLOCK Enterprise
+APP_NAME=SICTACK Enterprise
 APP_VERSION=2.0.0
 DEBUG=false
 ENVIRONMENT=production
@@ -67,7 +67,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \\
     curl \\
     && rm -rf /var/lib/apt/lists/*
 
-# Install INTENTLOCK Python SDK
+# Install SICTACK Python SDK
 COPY sdk/python /sdk/python
 RUN pip install --no-cache-dir /sdk/python
 
@@ -84,7 +84,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--worker
 
   const healthCheckResponse = `{
   "status": "healthy",
-  "service": "INTENTLOCK API",
+  "service": "SICTACK API",
   "version": "2.0.0",
   "database": "postgresql"
 }`;
@@ -95,31 +95,31 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--worker
         {/* Header */}
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-xs font-mono font-medium text-emerald-400">
+            <span className="rounded-md bg-[#EDF5F0] border border-[#234E39]/20 px-2 py-0.5 text-xs font-mono font-medium text-[#234E39]">
               Operations &amp; Infrastructure
             </span>
-            <span className="text-xs text-slate-500">Production Specification</span>
+            <span className="text-xs text-[#787A80]">Production Specification</span>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+          <h1 className="text-3xl font-extrabold tracking-tight text-[#18191B] sm:text-4xl">
             Production Deployment Guide
           </h1>
-          <p className="mt-3 text-base text-slate-400 leading-relaxed">
-            INTENTLOCK is built for resilient enterprise operations across decoupled cloud environments. This guide documents the verified cloud topology, database pooling, configuration variables, migration workflow, and monitoring practices.
+          <p className="mt-3 text-base text-[#56585D] leading-relaxed">
+            SICTACK is built for resilient enterprise operations across decoupled cloud environments. This guide documents the verified cloud topology, database pooling, configuration variables, migration workflow, and monitoring practices.
           </p>
         </div>
 
         {/* Section: Topology */}
-        <section id="topology" className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-white border-b border-slate-800/80 pb-2">
+        <section id="topology" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
             Architecture &amp; Cloud Topology
           </h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            The INTENTLOCK platform runs across three dedicated cloud infrastructure components:
+          <p className="text-sm text-[#56585D] leading-relaxed">
+            The SICTACK platform runs across three dedicated cloud infrastructure components:
           </p>
 
-          <div className="rounded-xl border border-slate-800 overflow-hidden">
+          <div className="rounded-xl border border-[#E2E0D8] overflow-hidden">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#0a0e17] border-b border-slate-800 text-slate-400 font-mono">
+              <thead className="bg-[#FFFFFF] border-b border-[#E2E0D8] text-[#56585D] font-mono">
                 <tr>
                   <th className="p-3">Component</th>
                   <th className="p-3">Platform</th>
@@ -127,24 +127,24 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--worker
                   <th className="p-3">Runtime Details</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 bg-[#080c14] text-slate-300">
+              <tbody className="divide-y divide-[#E2E0D8] bg-[#FFFFFF] text-[#56585D]">
                 <tr>
-                  <td className="p-3 font-semibold text-white">Frontend Dashboard &amp; Docs</td>
+                  <td className="p-3 font-semibold text-[#18191B]">Frontend Dashboard &amp; Docs</td>
                   <td className="p-3 font-mono text-cyan-400">Vercel</td>
-                  <td className="p-3 font-mono text-slate-300">https://intentlock-wheat.vercel.app</td>
-                  <td className="p-3 text-slate-400">Next.js 16 with Edge Network CDN, Server-Side Rendering, and Client-Side SOC consoles.</td>
+                  <td className="p-3 font-mono text-[#56585D]">https://intentlock-wheat.vercel.app</td>
+                  <td className="p-3 text-[#56585D]">Next.js 16 with Edge Network CDN, Server-Side Rendering, and Client-Side SOC consoles.</td>
                 </tr>
                 <tr>
-                  <td className="p-3 font-semibold text-white">Security Gateway API</td>
-                  <td className="p-3 font-mono text-emerald-400">Render</td>
-                  <td className="p-3 font-mono text-slate-300">https://intentlock-backend-ze2i.onrender.com</td>
-                  <td className="p-3 text-slate-400">Python 3.11 / FastAPI with Uvicorn multi-worker server behind managed HTTPS load balancers.</td>
+                  <td className="p-3 font-semibold text-[#18191B]">Security Gateway API</td>
+                  <td className="p-3 font-mono text-[#234E39]">Render</td>
+                  <td className="p-3 font-mono text-[#56585D]">https://intentlock-backend-ze2i.onrender.com</td>
+                  <td className="p-3 text-[#56585D]">Python 3.11 / FastAPI with Uvicorn multi-worker server behind managed HTTPS load balancers.</td>
                 </tr>
                 <tr>
-                  <td className="p-3 font-semibold text-white">Relational Database &amp; RLS</td>
-                  <td className="p-3 font-mono text-emerald-300">Supabase</td>
-                  <td className="p-3 font-mono text-slate-300">Managed PostgreSQL 15</td>
-                  <td className="p-3 text-slate-400">Row Level Security (RLS) enabled on 12 core tables, Supavisor connection pooling, and SSL required.</td>
+                  <td className="p-3 font-semibold text-[#18191B]">Relational Database &amp; RLS</td>
+                  <td className="p-3 font-mono text-[#234E39]">Supabase</td>
+                  <td className="p-3 font-mono text-[#56585D]">Managed PostgreSQL 15</td>
+                  <td className="p-3 text-[#56585D]">Row Level Security (RLS) enabled on 12 core tables, Supavisor connection pooling, and SSL required.</td>
                 </tr>
               </tbody>
             </table>
@@ -152,41 +152,41 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--worker
         </section>
 
         {/* Section: SDK Installation */}
-        <section id="sdk-installation" className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-white border-b border-slate-800/80 pb-2">
+        <section id="sdk-installation" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
             Python SDK in Production
           </h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
+          <p className="text-sm text-[#56585D] leading-relaxed">
             In agent production environments (e.g., containerized worker tasks, background queue consumers, or microservices), install the SDK using standard package tooling:
           </p>
 
           <CodeBlock
             code={`# Option A: Install from repository checkout (recommended for locked mono-repos)
-pip install /path/to/INTENTLOCK_SDK/sdk/python
+pip install /path/to/SICTACK_SDK/sdk/python
 
 # Option B: Install pre-built wheel
-pip install intentlock_sdk-0.1.0-py3-none-any.whl
+pip install sictack_sdk-1.0.0-py3-none-any.whl
 
 # Verify installation in your Python environment
-python -c "import intentlock; print(intentlock.__version__)"
-# Output: 0.1.0`}
+python -c "import sictack; print(sictack.__version__)"
+# Output: 1.0.0`}
             language="bash"
             filename="Terminal"
           />
 
           <Callout type="info" title="Python Version Requirement">
             <p className="text-xs leading-relaxed">
-              The INTENTLOCK Python SDK specifies <code className="font-mono text-emerald-300">requires-python = &quot;&gt;=3.12&quot;</code> in <code className="font-mono text-emerald-300">pyproject.toml</code>. Ensure your runtime environment uses <strong>Python &ge; 3.12</strong>.
+              The SICTACK Python SDK specifies <code className="font-mono text-[#234E39]">requires-python = &quot;&gt;=3.12&quot;</code> in <code className="font-mono text-[#234E39]">pyproject.toml</code>. Ensure your runtime environment uses <strong>Python &ge; 3.12</strong>.
             </p>
           </Callout>
         </section>
 
         {/* Section: Environment Variables */}
-        <section id="environment-vars" className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-white border-b border-slate-800/80 pb-2">
+        <section id="environment-vars" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
             Environment Variables Reference
           </h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
+          <p className="text-sm text-[#56585D] leading-relaxed">
             Configure the backend service with environment variables passed via your cloud orchestrator (Render dashboard, Docker secrets, or Kubernetes ConfigMaps).
           </p>
 
@@ -201,180 +201,180 @@ python -c "import intentlock; print(intentlock.__version__)"
         </section>
 
         {/* Section: Database Migrations */}
-        <section id="database-migrations" className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-white border-b border-slate-800/80 pb-2">
+        <section id="database-migrations" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
             PostgreSQL &amp; Migration Workflow
           </h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            INTENTLOCK uses a deterministic, versioned, idempotent migration engine (<code className="font-mono text-emerald-300">backend/app/db/migrations.py</code>). Migrations are tracked in the <code className="font-mono text-emerald-300">schema_migrations</code> table:
+          <p className="text-sm text-[#56585D] leading-relaxed">
+            SICTACK uses a deterministic, versioned, idempotent migration engine (<code className="font-mono text-[#234E39]">backend/app/db/migrations.py</code>). Migrations are tracked in the <code className="font-mono text-[#234E39]">schema_migrations</code> table:
           </p>
 
           <div className="space-y-3 text-xs">
-            <div className="rounded-xl border border-slate-800 bg-[#0a0e17] p-4 space-y-2">
+            <div className="rounded-xl border border-[#E2E0D8] bg-[#FFFFFF] p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-mono font-bold text-emerald-400">Migration 1: 001_v2_enterprise_multitenancy_schema</span>
-                <span className="text-[10px] font-mono text-slate-500">Version 1</span>
+                <span className="font-mono font-bold text-[#234E39]">Migration 1: 001_v2_enterprise_multitenancy_schema</span>
+                <span className="text-[10px] font-mono text-[#787A80]">Version 1</span>
               </div>
-              <p className="text-slate-300">
-                Adds <code className="font-mono text-emerald-300">org_id</code> multi-tenancy columns, indexes, intent governance columns to <code className="font-mono text-slate-300">approvals</code>, and SHA-256 sequential hash chain columns (<code className="font-mono text-slate-300">sequence_number</code>, <code className="font-mono text-slate-300">previous_hash</code>, <code className="font-mono text-slate-300">entry_hash</code>) to <code className="font-mono text-slate-300">audit_events</code>.
+              <p className="text-[#56585D]">
+                Adds <code className="font-mono text-[#234E39]">org_id</code> multi-tenancy columns, indexes, intent governance columns to <code className="font-mono text-[#56585D]">approvals</code>, and SHA-256 sequential hash chain columns (<code className="font-mono text-[#56585D]">sequence_number</code>, <code className="font-mono text-[#56585D]">previous_hash</code>, <code className="font-mono text-[#56585D]">entry_hash</code>) to <code className="font-mono text-[#56585D]">audit_events</code>.
               </p>
             </div>
 
-            <div className="rounded-xl border border-slate-800 bg-[#0a0e17] p-4 space-y-2">
+            <div className="rounded-xl border border-[#E2E0D8] bg-[#FFFFFF] p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-mono font-bold text-emerald-400">Migration 2: 002_enable_supabase_rls_and_revoke_public_api_grants</span>
-                <span className="text-[10px] font-mono text-slate-500">Version 2</span>
+                <span className="font-mono font-bold text-[#234E39]">Migration 2: 002_enable_supabase_rls_and_revoke_public_api_grants</span>
+                <span className="text-[10px] font-mono text-[#787A80]">Version 2</span>
               </div>
-              <p className="text-slate-300">
-                Enables PostgreSQL Row Level Security (RLS) across all 12 application tables. Revokes public PostgREST grants from <code className="font-mono text-slate-400">anon</code>, <code className="font-mono text-slate-400">authenticated</code>, and <code className="font-mono text-slate-400">PUBLIC</code>. Revokes privileges strictly from sequences owned by INTENTLOCK tables via <code className="font-mono text-emerald-300">pg_depend</code> catalog matching, preserving <code className="font-mono text-emerald-300">service_role</code> access.
+              <p className="text-[#56585D]">
+                Enables PostgreSQL Row Level Security (RLS) across all 12 application tables. Revokes public PostgREST grants from <code className="font-mono text-[#56585D]">anon</code>, <code className="font-mono text-[#56585D]">authenticated</code>, and <code className="font-mono text-[#56585D]">PUBLIC</code>. Revokes privileges strictly from sequences owned by SICTACK tables via <code className="font-mono text-[#234E39]">pg_depend</code> catalog matching, preserving <code className="font-mono text-[#234E39]">service_role</code> access.
               </p>
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-800 bg-[#0a0e17] p-4 text-xs space-y-2">
-            <span className="font-semibold text-white">Migration Execution Dynamics</span>
-            <p className="text-slate-400 leading-relaxed">
-              During application startup, the FastAPI lifespan hook (<code className="font-mono text-emerald-300">backend/app/main.py</code>) executes <code className="font-mono text-emerald-300">apply_migrations(engine)</code> to apply unapplied migrations idempotently. For enterprise multi-worker or zero-downtime deployments using Supabase pooling, connect via the <strong>Session Pooler (port 5432)</strong> as a dedicated pre-deploy release job prior to scaling API worker containers on the Transaction Pooler (port 6543).
+          <div className="rounded-xl border border-[#E2E0D8] bg-[#FFFFFF] p-4 text-xs space-y-2">
+            <span className="font-semibold text-[#18191B]">Migration Execution Dynamics</span>
+            <p className="text-[#56585D] leading-relaxed">
+              During application startup, the FastAPI lifespan hook (<code className="font-mono text-[#234E39]">backend/app/main.py</code>) executes <code className="font-mono text-[#234E39]">apply_migrations(engine)</code> to apply unapplied migrations idempotently. For enterprise multi-worker or zero-downtime deployments using Supabase pooling, connect via the <strong>Session Pooler (port 5432)</strong> as a dedicated pre-deploy release job prior to scaling API worker containers on the Transaction Pooler (port 6543).
             </p>
           </div>
         </section>
 
         {/* Section: Docker Containerization */}
         <section className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-white border-b border-slate-800/80 pb-2">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
             Docker Containerization
           </h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
+          <p className="text-sm text-[#56585D] leading-relaxed">
             The FastAPI backend is packaged using a multi-layer slim Debian container image:
           </p>
           <CodeBlock code={dockerfileExample} language="dockerfile" filename="backend/Dockerfile" />
         </section>
 
         {/* Section: Health Probes */}
-        <section id="health-probes" className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-white border-b border-slate-800/80 pb-2">
+        <section id="health-probes" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
             Health Checks &amp; Monitoring
           </h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
+          <p className="text-sm text-[#56585D] leading-relaxed">
             Configure container orchestrators and uptime monitoring tools to probe the following endpoints:
           </p>
 
           <div className="space-y-3">
-            <div className="rounded-xl border border-slate-800 bg-[#0a0e17] p-4 text-xs space-y-2">
+            <div className="rounded-xl border border-[#E2E0D8] bg-[#FFFFFF] p-4 text-xs space-y-2">
               <div className="flex items-center justify-between font-mono">
-                <span className="font-bold text-emerald-400">GET /health</span>
-                <span className="text-slate-500">Liveness / Readiness Probe (Public)</span>
+                <span className="font-bold text-[#234E39]">GET /health</span>
+                <span className="text-[#787A80]">Liveness / Readiness Probe (Public)</span>
               </div>
-              <p className="text-slate-400">Returns service status, current version, and database dialect without requiring authentication.</p>
+              <p className="text-[#56585D]">Returns service status, current version, and database dialect without requiring authentication.</p>
               <CodeBlock code={healthCheckResponse} language="json" filename="Response Payload" />
             </div>
 
-            <div className="rounded-xl border border-slate-800 bg-[#0a0e17] p-4 text-xs space-y-2">
+            <div className="rounded-xl border border-[#E2E0D8] bg-[#FFFFFF] p-4 text-xs space-y-2">
               <div className="flex items-center justify-between font-mono">
                 <span className="font-bold text-cyan-400">GET /api/v1/audit/verify</span>
-                <span className="text-slate-500">Integrity Probe (Requires JWT/API Key)</span>
+                <span className="text-[#787A80]">Integrity Probe (Requires JWT/API Key)</span>
               </div>
-              <p className="text-slate-400">Recalculates sequential SHA-256 hashes across all audit records for the tenant to confirm zero database tampering.</p>
+              <p className="text-[#56585D]">Recalculates sequential SHA-256 hashes across all audit records for the tenant to confirm zero database tampering.</p>
             </div>
           </div>
         </section>
 
         {/* Section: Network Security */}
-        <section id="network-security" className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-white border-b border-slate-800/80 pb-2">
+        <section id="network-security" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
             HTTPS, CORS &amp; Security Headers
           </h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            All production HTTP responses include defensive headers enforced via FastAPI middleware (<code className="font-mono text-emerald-300">backend/app/main.py</code>):
+          <p className="text-sm text-[#56585D] leading-relaxed">
+            All production HTTP responses include defensive headers enforced via FastAPI middleware (<code className="font-mono text-[#234E39]">backend/app/main.py</code>):
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-            <div className="rounded-xl border border-slate-800 bg-[#0a0e17] p-3.5 space-y-1">
-              <span className="font-mono font-bold text-emerald-400">X-Content-Type-Options</span>
-              <p className="text-slate-400"><code className="font-mono text-emerald-300">nosniff</code>: Prevents MIME-type sniffing by browsers.</p>
+            <div className="rounded-xl border border-[#E2E0D8] bg-[#FFFFFF] p-3.5 space-y-1">
+              <span className="font-mono font-bold text-[#234E39]">X-Content-Type-Options</span>
+              <p className="text-[#56585D]"><code className="font-mono text-[#234E39]">nosniff</code>: Prevents MIME-type sniffing by browsers.</p>
             </div>
-            <div className="rounded-xl border border-slate-800 bg-[#0a0e17] p-3.5 space-y-1">
-              <span className="font-mono font-bold text-emerald-400">X-Frame-Options</span>
-              <p className="text-slate-400"><code className="font-mono text-emerald-300">DENY</code>: Blocks clickjacking by preventing iframe embedding.</p>
+            <div className="rounded-xl border border-[#E2E0D8] bg-[#FFFFFF] p-3.5 space-y-1">
+              <span className="font-mono font-bold text-[#234E39]">X-Frame-Options</span>
+              <p className="text-[#56585D]"><code className="font-mono text-[#234E39]">DENY</code>: Blocks clickjacking by preventing iframe embedding.</p>
             </div>
-            <div className="rounded-xl border border-slate-800 bg-[#0a0e17] p-3.5 space-y-1">
-              <span className="font-mono font-bold text-emerald-400">Referrer-Policy</span>
-              <p className="text-slate-400"><code className="font-mono text-emerald-300">strict-origin-when-cross-origin</code>: Protects sensitive paths in referrers.</p>
+            <div className="rounded-xl border border-[#E2E0D8] bg-[#FFFFFF] p-3.5 space-y-1">
+              <span className="font-mono font-bold text-[#234E39]">Referrer-Policy</span>
+              <p className="text-[#56585D]"><code className="font-mono text-[#234E39]">strict-origin-when-cross-origin</code>: Protects sensitive paths in referrers.</p>
             </div>
           </div>
 
-          <p className="text-xs text-slate-400">
-            <strong>CORS Policy:</strong> Configured via <code className="font-mono text-emerald-300">CORS_ORIGINS</code>. In production, only the trusted Vercel frontend origin (<code className="font-mono text-slate-300">https://intentlock-wheat.vercel.app</code>) is permitted for cross-origin browser requests with credentials.
+          <p className="text-xs text-[#56585D]">
+            <strong>CORS Policy:</strong> Configured via <code className="font-mono text-[#234E39]">CORS_ORIGINS</code>. In production, only the trusted Vercel frontend origin (<code className="font-mono text-[#56585D]">https://intentlock-wheat.vercel.app</code>) is permitted for cross-origin browser requests with credentials.
           </p>
         </section>
 
         {/* Section: Key Management */}
-        <section id="key-management" className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-white border-b border-slate-800/80 pb-2">
+        <section id="key-management" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
             API Key Management
           </h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            INTENTLOCK generates prefixed machine-to-machine API keys:
+          <p className="text-sm text-[#56585D] leading-relaxed">
+            SICTACK generates prefixed machine-to-machine API keys:
           </p>
-          <ul className="text-xs text-slate-300 list-disc list-inside space-y-1.5">
-            <li><strong>Live Keys:</strong> Prefix <code className="font-mono text-emerald-400">ilk_live_...</code>. Generated for production agent interception.</li>
-            <li><strong>Test Keys:</strong> Prefix <code className="font-mono text-amber-400">ilk_test_...</code>. Generated for staging and sandbox environments.</li>
-            <li><strong>Storage Security:</strong> Raw keys are shown to operators <em>exactly once</em> at creation time. The backend hashes keys with salt before storage in PostgreSQL (<code className="font-mono text-emerald-300">api_keys</code> table).</li>
-            <li><strong>Revocation:</strong> Admins can revoke keys instantly via <code className="font-mono text-emerald-300">DELETE /api/v1/api-keys/{'{key_id}'}</code> or through the dashboard.</li>
+          <ul className="text-xs text-[#56585D] list-disc list-inside space-y-1.5">
+            <li><strong>Live Keys:</strong> Prefix <code className="font-mono text-[#234E39]">ilk_live_...</code>. Generated for production agent interception.</li>
+            <li><strong>Test Keys:</strong> Prefix <code className="font-mono text-[#8D5B18]">ilk_test_...</code>. Generated for staging and sandbox environments.</li>
+            <li><strong>Storage Security:</strong> Raw keys are shown to operators <em>exactly once</em> at creation time. The backend hashes keys with salt before storage in PostgreSQL (<code className="font-mono text-[#234E39]">api_keys</code> table).</li>
+            <li><strong>Revocation:</strong> Admins can revoke keys instantly via <code className="font-mono text-[#234E39]">DELETE /api/v1/api-keys/{'{key_id}'}</code> or through the dashboard.</li>
           </ul>
         </section>
 
         {/* Section: Backup & Recovery */}
-        <section id="backup-recovery" className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-white border-b border-slate-800/80 pb-2">
+        <section id="backup-recovery" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
             Backup, Rollback &amp; Disaster Recovery
           </h2>
-          <div className="space-y-3 text-xs text-slate-300">
-            <div className="rounded-xl border border-slate-800 bg-[#0a0e17] p-4 space-y-2">
-              <h3 className="font-semibold text-white">Database Backup &amp; PITR</h3>
-              <p className="text-slate-400">
+          <div className="space-y-3 text-xs text-[#56585D]">
+            <div className="rounded-xl border border-[#E2E0D8] bg-[#FFFFFF] p-4 space-y-2">
+              <h3 className="font-semibold text-[#18191B]">Database Backup &amp; PITR</h3>
+              <p className="text-[#56585D]">
                 Supabase provides automated daily backups and Point-In-Time Recovery (PITR) for PostgreSQL. Write-Ahead Logs (WAL) are archived continuously. In the event of catastrophic data corruption, the database can be restored to any second within the retention window.
               </p>
             </div>
 
-            <div className="rounded-xl border border-slate-800 bg-[#0a0e17] p-4 space-y-2">
-              <h3 className="font-semibold text-white">Rollback Strategy</h3>
-              <p className="text-slate-400">
-                Because INTENTLOCK schema migrations are additive (adding columns, indexes, and RLS rules), previous backend container versions remain compatible with newer database states. If a deployment must be rolled back, revert the Render deployment to the previous image tag without requiring an immediate database downgrade.
+            <div className="rounded-xl border border-[#E2E0D8] bg-[#FFFFFF] p-4 space-y-2">
+              <h3 className="font-semibold text-[#18191B]">Rollback Strategy</h3>
+              <p className="text-[#56585D]">
+                Because SICTACK schema migrations are additive (adding columns, indexes, and RLS rules), previous backend container versions remain compatible with newer database states. If a deployment must be rolled back, revert the Render deployment to the previous image tag without requiring an immediate database downgrade.
               </p>
             </div>
           </div>
         </section>
 
         {/* Section: Practices vs Recommendations */}
-        <section id="practices-vs-recommendations" className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-white border-b border-slate-800/80 pb-2">
+        <section id="practices-vs-recommendations" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
             Current Practices vs Enterprise Recommendations
           </h2>
-          <div className="rounded-xl border border-slate-800 overflow-hidden">
+          <div className="rounded-xl border border-[#E2E0D8] overflow-hidden">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#0a0e17] border-b border-slate-800 text-slate-400 font-mono">
+              <thead className="bg-[#FFFFFF] border-b border-[#E2E0D8] text-[#56585D] font-mono">
                 <tr>
                   <th className="p-3">Operational Area</th>
                   <th className="p-3">Current Verified Implementation</th>
                   <th className="p-3">Recommended Enterprise Enhancement</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 bg-[#080c14] text-slate-300">
+              <tbody className="divide-y divide-[#E2E0D8] bg-[#FFFFFF] text-[#56585D]">
                 <tr>
-                  <td className="p-3 font-semibold text-white">Database Connection Pooling</td>
-                  <td className="p-3 text-slate-400">Supabase Supavisor pooler (port 6543 / 5432).</td>
-                  <td className="p-3 text-slate-400">Deploy PgBouncer as a dedicated sidecar or internal cluster proxy.</td>
+                  <td className="p-3 font-semibold text-[#18191B]">Database Connection Pooling</td>
+                  <td className="p-3 text-[#56585D]">Supabase Supavisor pooler (port 6543 / 5432).</td>
+                  <td className="p-3 text-[#56585D]">Deploy PgBouncer as a dedicated sidecar or internal cluster proxy.</td>
                 </tr>
                 <tr>
-                  <td className="p-3 font-semibold text-white">Secrets Management</td>
-                  <td className="p-3 text-slate-400">Environment variables loaded into Render and Vercel.</td>
-                  <td className="p-3 text-slate-400">Integrate HashiCorp Vault or AWS Secrets Manager with dynamic rotation.</td>
+                  <td className="p-3 font-semibold text-[#18191B]">Secrets Management</td>
+                  <td className="p-3 text-[#56585D]">Environment variables loaded into Render and Vercel.</td>
+                  <td className="p-3 text-[#56585D]">Integrate HashiCorp Vault or AWS Secrets Manager with dynamic rotation.</td>
                 </tr>
                 <tr>
-                  <td className="p-3 font-semibold text-white">Audit Log Archiving</td>
-                  <td className="p-3 text-slate-400">PostgreSQL table with SHA-256 hash chaining.</td>
-                  <td className="p-3 text-slate-400">Automated daily streaming of verified hash-chain snapshots to immutable AWS S3 Glacier Object Lock.</td>
+                  <td className="p-3 font-semibold text-[#18191B]">Audit Log Archiving</td>
+                  <td className="p-3 text-[#56585D]">PostgreSQL table with SHA-256 hash chaining.</td>
+                  <td className="p-3 text-[#56585D]">Automated daily streaming of verified hash-chain snapshots to immutable AWS S3 Glacier Object Lock.</td>
                 </tr>
               </tbody>
             </table>

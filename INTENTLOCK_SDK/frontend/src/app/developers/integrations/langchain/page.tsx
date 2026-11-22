@@ -1,4 +1,4 @@
-// INTENTLOCK 2.0 – LangChain Integration Guide
+// SICTACK 1.0 – LangChain Integration Guide
 import { DeveloperLayout } from "@/components/developers/DeveloperLayout";
 import { CodeBlock } from "@/components/developers/CodeBlock";
 import { Callout } from "@/components/developers/Callout";
@@ -19,14 +19,47 @@ export default function LangChainIntegrationPage() {
     { id: "invocations", title: "Execution Protocols (.run & .invoke)", level: 2 },
     { id: "error-handling", title: "Handling Denials & LLM Errors", level: 2 },
     { id: "approvals", title: "Human Approvals in LangChain", level: 2 },
+    { id: "delegation", title: "Multi-Agent Delegation in LangChain", level: 2 },
     { id: "limitations", title: "Trust Boundaries & Limitations", level: 2 },
   ];
 
-  const installCode = `pip install "intentlock-sdk>=0.1.0"
-pip install "langchain-core>=0.1.0"`;
+  const delegationCode = `from sictack.unified import Sictack
+from sictack.integrations.langchain import SecureTool
 
-  const secureToolCode = `from intentlock import SecureAgent, Config, Policy
-from intentlock.integrations.langchain import SecureTool
+# 1. Initialize unified security manager
+security = Sictack(signing_key="enterprise-secret")
+
+# 2. Issue scoped delegation token from supervisor to worker
+token = security.delegate(
+    parent_agent_id="supervisor-agent",
+    child_agent_id="analyst-agent",
+    allowed_capabilities=["research:query"],
+    allocated_budget=20,
+)
+
+def query_docs(query: str) -> str:
+    return f"Research results for: {query}"
+
+# 3. Create SecureTool bound to unified security instance
+doc_tool = SecureTool(
+    name="query_docs",
+    func=query_docs,
+    security=security,
+    permission="research:query",
+)
+
+# 4. Invoke tool passing the delegation token in tool context
+result = doc_tool.run(
+    {"query": "Zero Trust Multi-Agent"},
+    delegation_token=token,
+)
+print("Delegated Execution Result:", result)`;
+
+  const installCode = `pip install "sictack>=1.0.0"
+pip install "langchain-core>=1.0.0"`;
+
+  const secureToolCode = `from sictack import SecureAgent, Config, Policy
+from sictack.integrations.langchain import SecureTool
 
 # 1. Define deterministic policy
 policy = Policy(
@@ -67,7 +100,7 @@ print("Tool Output:", result)
 direct_result = search_tool.run("zero-trust agent security")
 print("Direct Output:", direct_result)`;
 
-  const denialHandlingCode = `from intentlock.integrations.langchain import secure_langchain_tool
+  const denialHandlingCode = `from sictack.integrations.langchain import secure_langchain_tool
 
 def execute_shell(command: str) -> str:
     return f"Executed: {command}"
@@ -98,7 +131,7 @@ except Exception as e:
     print(f"Halted immediately: {type(e).__name__}")
     # -> Halted immediately: PermissionDeniedError`;
 
-  const approvalCode = `from intentlock.exceptions import ApprovalRequiredError
+  const approvalCode = `from sictack.exceptions import ApprovalRequiredError
 
 def transfer_funds(recipient: str, amount: float) -> str:
     return f"Transferred USD {amount:.2f} to {recipient}"
@@ -135,92 +168,103 @@ except ApprovalRequiredError as e:
         {/* Header */}
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-xs font-mono font-medium text-emerald-400">
+            <span className="rounded-md bg-[#EDF5F0] border border-[#234E39]/20 px-2 py-0.5 text-xs font-mono font-medium text-[#234E39]">
               Integrations
             </span>
-            <span className="text-xs text-slate-500">LangChain Core</span>
+            <span className="text-xs text-[#787A80]">LangChain Core</span>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+          <h1 className="text-3xl font-extrabold tracking-tight text-[#18191B] sm:text-4xl">
             LangChain Tool Security
           </h1>
-          <p className="mt-3 text-base text-slate-400 leading-relaxed">
-            Secure LangChain tools, agents, and custom Runnables using <code className="text-emerald-300 font-mono text-sm">SecureTool</code>. Enforce deterministic permission boundaries, automatic argument normalization, and approval lifecycles.
+          <p className="mt-3 text-base text-[#56585D] leading-relaxed">
+            Secure LangChain tools, agents, and custom Runnables using <code className="text-[#234E39] font-mono text-sm">SecureTool</code>. Enforce deterministic permission boundaries, automatic argument normalization, and approval lifecycles.
           </p>
         </div>
 
         {/* Section: Overview */}
-        <section id="overview" className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-white border-b border-slate-800/80 pb-2">
+        <section id="overview" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
             Overview &amp; Supported Dependencies
           </h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            The INTENTLOCK LangChain adapter integrates with LangChain 0.1, 0.2, and 0.3. It implements standard LangChain tool interfaces without adding runtime overhead:
+          <p className="text-sm text-[#56585D] leading-relaxed">
+            The SICTACK LangChain adapter integrates with LangChain 0.1, 0.2, and 0.3. It implements standard LangChain tool interfaces without adding runtime overhead:
           </p>
           <CodeBlock code={installCode} language="bash" filename="Terminal" />
         </section>
 
         {/* Section: Wrapping */}
-        <section id="wrapping" className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-white border-b border-slate-800/80 pb-2">
+        <section id="wrapping" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
             Wrapping Tools with SecureTool
           </h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            Wrap any callable or LangChain <code className="text-emerald-300 font-mono">BaseTool</code> using <code className="text-emerald-300 font-mono">SecureTool</code>:
+          <p className="text-sm text-[#56585D] leading-relaxed">
+            Wrap any callable or LangChain <code className="text-[#234E39] font-mono">BaseTool</code> using <code className="text-[#234E39] font-mono">SecureTool</code>:
           </p>
           <CodeBlock code={secureToolCode} language="python" filename="secure_langchain_demo.py" />
         </section>
 
         {/* Section: Helper */}
-        <section id="helper" className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-white border-b border-slate-800/80 pb-2">
+        <section id="helper" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
             Using secure_langchain_tool Helper
           </h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            The <code className="text-emerald-300 font-mono">secure_langchain_tool</code> utility inspects functions, classes, and decorated <code className="text-slate-200 font-mono">@tool</code> callables automatically:
+          <p className="text-sm text-[#56585D] leading-relaxed">
+            The <code className="text-[#234E39] font-mono">secure_langchain_tool</code> utility inspects functions, classes, and decorated <code className="text-[#18191B] font-mono">@tool</code> callables automatically:
           </p>
           <CodeBlock code={denialHandlingCode} language="python" filename="helper_usage.py" />
         </section>
 
         {/* Section: Invocations */}
-        <section id="invocations" className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-white border-b border-slate-800/80 pb-2">
+        <section id="invocations" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
             Execution Protocols (.run &amp; .invoke)
           </h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            <code className="text-emerald-300 font-mono">SecureTool</code> supports both classic LangChain <code className="text-slate-300 font-mono">.run()</code> and modern LCEL <code className="text-slate-300 font-mono">.invoke()</code> invocation patterns:
+          <p className="text-sm text-[#56585D] leading-relaxed">
+            <code className="text-[#234E39] font-mono">SecureTool</code> supports both classic LangChain <code className="text-[#56585D] font-mono">.run()</code> and modern LCEL <code className="text-[#56585D] font-mono">.invoke()</code> invocation patterns:
           </p>
           <CodeBlock code={invokeCode} language="python" filename="invocations.py" />
         </section>
 
         {/* Section: Error Handling */}
-        <section id="error-handling" className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-white border-b border-slate-800/80 pb-2">
+        <section id="error-handling" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
             Handling Denials &amp; LLM Context
           </h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            When <code className="text-emerald-300 font-mono">handle_tool_error=True</code> is set, policy denials do not crash the agent reasoning loop. Instead, a clean message formatted as <code className="text-amber-300 font-mono">[SECURITY_ERROR: PermissionDeniedError]</code> is returned to the model, allowing it to explain the restriction to the user.
+          <p className="text-sm text-[#56585D] leading-relaxed">
+            When <code className="text-[#234E39] font-mono">handle_tool_error=True</code> is set, policy denials do not crash the agent reasoning loop. Instead, a clean message formatted as <code className="text-[#8D5B18] font-mono">[SECURITY_ERROR: PermissionDeniedError]</code> is returned to the model, allowing it to explain the restriction to the user.
           </p>
         </section>
 
         {/* Section: Approvals */}
-        <section id="approvals" className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-white border-b border-slate-800/80 pb-2">
+        <section id="approvals" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
             Human Approvals in LangChain
           </h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            When sensitive actions require human confirmation, set <code className="text-emerald-300 font-mono">handle_tool_error=False</code> to catch <code className="text-amber-400 font-mono">ApprovalRequiredError</code> and resume with <code className="text-emerald-300 font-mono">approval_id</code>:
+          <p className="text-sm text-[#56585D] leading-relaxed">
+            When sensitive actions require human confirmation, set <code className="text-[#234E39] font-mono">handle_tool_error=False</code> to catch <code className="text-[#8D5B18] font-mono">ApprovalRequiredError</code> and resume with <code className="text-[#234E39] font-mono">approval_id</code>:
           </p>
           <CodeBlock code={approvalCode} language="python" filename="approval_flow.py" />
         </section>
 
+        {/* Section: Delegation */}
+        <section id="delegation" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
+            Multi-Agent Delegation in LangChain
+          </h2>
+          <p className="text-sm text-[#56585D] leading-relaxed">
+            When orchestrating multiple LangChain agents or passing tools across hierarchical teams, bind <code className="text-[#234E39] font-mono">SecureTool</code> to a unified <code className="text-[#234E39] font-mono">Sictack</code> instance. The tool validates cryptographic delegation tokens, preventing confused-deputy attacks and privilege escalation:
+          </p>
+          <CodeBlock code={delegationCode} language="python" filename="langchain_delegation.py" />
+        </section>
+
         {/* Section: Limitations */}
-        <section id="limitations" className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight text-white border-b border-slate-800/80 pb-2">
+        <section id="limitations" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#18191B] border-b border-[#E2E0D8] pb-2">
             Trust Boundaries &amp; Limitations
           </h2>
           <Callout type="warning" title="In-Process Execution Boundary">
             <p className="text-xs leading-relaxed">
-              <code className="font-mono text-emerald-300">SecureTool</code> operates inside the Python process of your LangChain agent. If untrusted code can execute arbitrary Python commands (e.g. via dynamic <code className="font-mono text-slate-300">exec()</code> or <code className="font-mono text-slate-300">eval()</code>), boundary enforcement must be combined with operating system sandboxing.
+              <code className="font-mono text-[#234E39]">SecureTool</code> operates inside the Python process of your LangChain agent. If untrusted code can execute arbitrary Python commands (e.g. via dynamic <code className="font-mono text-[#56585D]">exec()</code> or <code className="font-mono text-[#56585D]">eval()</code>), boundary enforcement must be combined with operating system sandboxing.
             </p>
           </Callout>
         </section>

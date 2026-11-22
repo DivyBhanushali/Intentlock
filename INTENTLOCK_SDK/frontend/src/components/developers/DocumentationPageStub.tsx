@@ -1,4 +1,4 @@
-// INTENTLOCK 2.0 – Standard Documentation Overview & Structured Phase Stub
+// SICTACK 1.0 – Standard Documentation Overview & Structured Phase Stub
 import React from "react";
 import Link from "next/link";
 import { DeveloperLayout } from "./DeveloperLayout";

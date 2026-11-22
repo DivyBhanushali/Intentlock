@@ -1,4 +1,5 @@
-// INTENTLOCK – Compact, Precision Security Stat Card
+// SICTACK – Compact, Precision Security Stat Card
+// Concept A: Editorial Infrastructure (Surface White & Calm Semantic Accents)
 
 import React from "react";
 
@@ -11,11 +12,11 @@ interface StatCardProps {
 }
 
 const accentMap = {
-  emerald: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-  red: "text-rose-400 bg-rose-500/10 border-rose-500/20",
-  amber: "text-amber-400 bg-amber-500/10 border-amber-500/20",
-  blue: "text-sky-400 bg-sky-500/10 border-sky-500/20",
-  purple: "text-violet-400 bg-violet-500/10 border-violet-500/20",
+  emerald: "text-[#234E39] bg-[#EDF5F0] border-[#D4E8DC]",
+  red: "text-[#943425] bg-[#FDF1EF] border-[#F8D5D0]",
+  amber: "text-[#8D5B18] bg-[#FEF6EC] border-[#FBE3C6]",
+  blue: "text-[#485F84] bg-[#D5E3FF]/40 border-[#485F84]/20",
+  purple: "text-[#485F84] bg-[#F2F4F3] border-[#E4E9E8]",
 };
 
 export function StatCard({
@@ -26,23 +27,24 @@ export function StatCard({
   accentColor = "blue",
 }: StatCardProps) {
   return (
-    <div className="rounded-xl border border-[#1a2233] bg-[#0d111a] p-4 transition-all hover:border-[#2b3a55]">
+    <div className="rounded-lg border border-[#E4E9E8] bg-[#FFFFFF] p-4.5 shadow-xs transition-all hover:border-[#ADB3B2] hover:shadow-sm font-sans">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-slate-400">{label}</span>
+        <span className="text-[11px] font-semibold tracking-wider uppercase text-[#5A6063] font-mono">{label}</span>
         <div
-          className={`flex h-8 w-8 items-center justify-center rounded-lg border ${accentMap[accentColor]}`}
+          className={`flex h-7 w-7 items-center justify-center rounded border ${accentMap[accentColor]}`}
         >
           {icon}
         </div>
       </div>
-      <div className="mt-2 flex items-baseline gap-2">
-        <span className="text-2xl font-bold tracking-tight text-slate-100 font-mono">
+      <div className="mt-2.5 flex items-baseline gap-2">
+        <span className="text-2xl lg:text-3xl font-bold tracking-tight text-[#202629] font-mono">
           {value}
         </span>
       </div>
       {subtitle && (
-        <p className="mt-1 text-[11px] text-slate-500">{subtitle}</p>
+        <p className="mt-1 text-xs text-[#787E81] truncate font-normal">{subtitle}</p>
       )}
     </div>
   );
 }
+

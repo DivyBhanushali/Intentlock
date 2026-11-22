@@ -1,4 +1,5 @@
-// INTENTLOCK 2.0 – In-Page Table of Contents
+// SICTACK 1.0 – In-Page Table of Contents
+// Direction A: Warm Editorial Software (Human-Centered Design)
 "use client";
 
 import { useEffect, useState } from "react";
@@ -39,11 +40,11 @@ export function TableOfContents({ items }: TableOfContentsProps) {
 
   return (
     <aside className="hidden xl:block w-64 shrink-0">
-      <div className="sticky top-24 pl-6 border-l border-slate-800/80">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+      <div className="sticky top-20 pl-6 border-l border-[#E2E0D8]">
+        <h3 className="text-xs font-mono font-semibold uppercase tracking-wider text-[#787A80]">
           On this page
         </h3>
-        <ul className="mt-3 space-y-2 text-xs">
+        <ul className="mt-3 space-y-2 text-xs" role="list">
           {items.map((item) => {
             const isActive = activeId === item.id;
             return (
@@ -55,8 +56,8 @@ export function TableOfContents({ items }: TableOfContentsProps) {
                   href={`#${item.id}`}
                   className={`block transition-colors leading-normal ${
                     isActive
-                      ? "text-emerald-400 font-medium"
-                      : "text-slate-400 hover:text-slate-200"
+                      ? "text-[#1D3557] font-semibold"
+                      : "text-[#56585D] hover:text-[#18191B]"
                   }`}
                 >
                   {item.title}

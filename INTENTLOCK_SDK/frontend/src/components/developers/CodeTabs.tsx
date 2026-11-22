@@ -1,4 +1,5 @@
-// INTENTLOCK 2.0 – Accessible Multi-Language Code Tabs
+// SICTACK 1.0 – Accessible Multi-Language Code Tabs
+// Direction A: Warm Editorial Software (Human-Centered Design)
 "use client";
 
 import { useState, useRef } from "react";
@@ -41,9 +42,9 @@ export function CodeTabs({ tabs, defaultTabId }: CodeTabsProps) {
   };
 
   return (
-    <div className="my-5 rounded-xl border border-slate-800 bg-[#06080e] shadow-xl overflow-hidden">
+    <div className="my-6 w-full min-w-0 max-w-full rounded-xl border border-[#282A30] bg-[#141518] shadow-sm overflow-hidden">
       {/* Tab Selector Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 bg-[#0a0e17] px-2 pt-1.5">
+      <div className="flex items-center justify-between border-b border-[#282A30] bg-[#1A1B1F] px-2 pt-1.5">
         <div
           ref={tabListRef}
           role="tablist"
@@ -62,10 +63,10 @@ export function CodeTabs({ tabs, defaultTabId }: CodeTabsProps) {
                 aria-controls={`tabpanel-${tab.id}`}
                 tabIndex={isActive ? 0 : -1}
                 onClick={() => setActiveTabId(tab.id)}
-                className={`flex items-center gap-1.5 rounded-t-lg px-3.5 py-2 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
+                className={`flex items-center gap-1.5 rounded-t-lg px-3.5 py-2 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B8AC4] cursor-pointer ${
                   isActive
-                    ? "border-t-2 border-emerald-400 bg-[#06080e] text-emerald-300 font-semibold"
-                    : "text-slate-400 hover:bg-slate-800/40 hover:text-slate-200"
+                    ? "border-b-2 border-[#5B8AC4] bg-[#141518] text-[#EDEDEB] font-semibold"
+                    : "text-[#72747D] hover:bg-[#1E2024] hover:text-[#A6A8B0]"
                 }`}
               >
                 <span>{tab.label}</span>
@@ -73,7 +74,7 @@ export function CodeTabs({ tabs, defaultTabId }: CodeTabsProps) {
             );
           })}
         </div>
-        <span className="pr-3 text-[10px] font-mono uppercase tracking-wider text-slate-500">
+        <span className="pr-3 text-[10px] font-mono uppercase tracking-wider text-[#72747D]">
           {activeTab.language}
         </span>
       </div>
@@ -83,7 +84,7 @@ export function CodeTabs({ tabs, defaultTabId }: CodeTabsProps) {
         id={`tabpanel-${activeTab.id}`}
         role="tabpanel"
         aria-labelledby={`tab-${activeTab.id}`}
-        className="-mt-4"
+        className="-mt-5 w-full min-w-0 max-w-full"
       >
         <CodeBlock
           code={activeTab.code}

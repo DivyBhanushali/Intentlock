@@ -1,17 +1,33 @@
-// INTENTLOCK – Security Audit Log
+// SICTACK – Cryptographic Security Audit Log
+// Concept A: Editorial Infrastructure
 
 "use client";
 
-import { useEffect, useState } from "react";
-import { auditApi, auditVerifyApi, type AuditEvent, type DecisionVerdict, type AuditVerifyReport } from "@/lib/api";
+import { useEffect, useState, useMemo } from "react";
+import {
+  auditApi,
+  auditVerifyApi,
+  type AuditEvent,
+  type AuditVerifyReport,
+} from "@/lib/api";
 import { VerdictBadge } from "@/components/verdict-badge";
 import { formatDate } from "@/lib/utils";
-import { ListIcon, RefreshIcon, InfoIcon, ShieldIcon, CheckCircleIcon } from "@/components/icons";
+import {
+  ListIcon,
+  RefreshIcon,
+  ShieldIcon,
+  XCircleIcon,
+  CheckCircleIcon,
+  ExclamationIcon,
+} from "@/components/icons";
 
 export default function AuditPage() {
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Cryptographic Verification State
   const [verifyReport, setVerifyReport] = useState<AuditVerifyReport | null>(null);
   const [verifying, setVerifying] = useState(false);
 
@@ -19,233 +35,368 @@ export default function AuditPage() {
   const [verdictFilter, setVerdictFilter] = useState<string>("ALL");
   const [toolSearch, setToolSearch] = useState<string>("");
   const [agentSearch, setAgentSearch] = useState<string>("");
+  const [activeQuery, setActiveQuery] = useState({
+    verdict: "ALL",
+    tool: "",
+    agent: "",
+  });
+
+  // Modal Inspection
   const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
 
-  async function handleVerifyChain() {
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadInitialAudit() {
+      try {
+        const [data, rep] = await Promise.all([
+          auditApi.list({ limit: 100 }),
+          auditVerifyApi.verify().catch(() => null),
+        ]);
+        if (!ignore) {
+          setEvents(data);
+          if (rep) setVerifyReport(rep);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (!ignore) {
+          setError(err instanceof Error ? err.message : "Failed to load audit ledger");
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadInitialAudit();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const fetchEventsWithFilters = async (
+    vFilter = activeQuery.verdict,
+    tSearch = activeQuery.tool,
+    aSearch = activeQuery.agent
+  ) => {
+    setIsRefreshing(true);
+    setError(null);
+    try {
+      const data = await auditApi.list({
+        verdict: vFilter !== "ALL" ? vFilter : undefined,
+        tool_name: tSearch.trim() || undefined,
+        agent_id: aSearch.trim() || undefined,
+        limit: 100,
+      });
+      setEvents(data);
+      setActiveQuery({ verdict: vFilter, tool: tSearch, agent: aSearch });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to filter audit events");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleVerifyChain = async () => {
     setVerifying(true);
     try {
       const rep = await auditVerifyApi.verify();
       setVerifyReport(rep);
     } catch (err) {
-      alert("Failed to verify audit chain: " + String(err));
+      alert("Failed to verify audit hash chain: " + String(err));
     } finally {
       setVerifying(false);
     }
-  }
+  };
 
-  async function fetchEvents() {
-    setLoading(true);
-    setError(null);
-    try {
-      const [data, rep] = await Promise.all([
-        auditApi.list({
-          verdict: verdictFilter !== "ALL" ? verdictFilter : undefined,
-          tool_name: toolSearch.trim() || undefined,
-          agent_id: agentSearch.trim() || undefined,
-          limit: 50,
-        }),
-        auditVerifyApi.verify().catch(() => null),
-      ]);
-      setEvents(data);
-      if (rep) setVerifyReport(rep);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load audit events");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchEvents();
-  }, [verdictFilter]);
-
-  function handleFilterSubmit(e: React.FormEvent) {
+  const handleFilterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchEvents();
-  }
+    fetchEventsWithFilters(verdictFilter, toolSearch, agentSearch);
+  };
+
+  const handleResetFilters = () => {
+    setVerdictFilter("ALL");
+    setToolSearch("");
+    setAgentSearch("");
+    fetchEventsWithFilters("ALL", "", "");
+  };
+
+  // Metrics
+  const allowedCount = useMemo(
+    () => events.filter((e) => e.verdict === "ALLOW").length,
+    [events]
+  );
+  const blockedCount = useMemo(
+    () => events.filter((e) => e.verdict === "DENY").length,
+    [events]
+  );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-[#1a2233] pb-5">
+    <div className="space-y-8 font-sans text-[#202629]">
+      {/* ─── A. PAGE HEADER ─── */}
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-baseline sm:justify-between border-b border-[#E4E9E8] pb-6">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-slate-100">
-              Security Audit Trail
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#202629]">
+              Security Audit Ledger
             </h1>
-            <span className="rounded-full bg-sky-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-sky-400 border border-sky-500/25">
-              Append-Only · Tamper-Evident
+            <span className="rounded px-2 py-0.5 text-[10px] font-mono font-semibold text-[#485F84] bg-[#D5E3FF]/30 border border-[#485F84]/20">
+              APPEND-ONLY &middot; CRYPTOGRAPHICALLY SIGNED
             </span>
           </div>
-          <p className="mt-1 text-xs text-slate-400">
-            Immutable log of all AI tool authorization decisions, risk assessments, and execution results.
+          <p className="mt-1.5 text-xs text-[#5A6063] max-w-2xl leading-relaxed">
+            Immutable, hash-chained ledger recording every autonomous agent tool authorization
+            decision, calculated risk score, policy stage evaluation, and execution outcome.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Action Controls */}
+        <div className="flex items-center gap-2.5 shrink-0">
           <button
             type="button"
             onClick={handleVerifyChain}
             disabled={verifying}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-400 hover:bg-sky-500/20 transition-all disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded border border-[#485F84] bg-[#485F84] px-3.5 py-1.5 text-xs font-semibold text-[#FFFFFF] hover:bg-[#3C5377] transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+            title="Perform SHA-256 HMAC cryptographic chain verification"
           >
             <ShieldIcon size={13} className={verifying ? "animate-spin" : ""} />
-            {verifying ? "Verifying..." : "Verify Hash Chain"}
+            <span>{verifying ? "Verifying Ledger..." : "Verify Hash Chain"}</span>
           </button>
+
           <button
-            onClick={fetchEvents}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#1a2233] bg-[#0d111a] px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-[#121824] hover:text-slate-100 transition-colors disabled:opacity-50"
+            type="button"
+            onClick={() => fetchEventsWithFilters()}
+            disabled={isRefreshing || loading}
+            className="inline-flex items-center gap-1.5 rounded border border-[#E4E9E8] bg-[#FFFFFF] px-3 py-1.5 text-xs font-medium text-[#5A6063] hover:text-[#202629] hover:border-[#ADB3B2] transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+            title="Refresh Audit Events"
           >
-            <RefreshIcon size={14} className={loading ? "animate-spin" : ""} />
-            Refresh
+            <RefreshIcon size={13} className={isRefreshing ? "animate-spin" : ""} />
+            <span>{isRefreshing ? "Syncing..." : "Sync"}</span>
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Cryptographic Hash-Chain Verification Banner */}
-      {verifyReport && (
-        <div className={`rounded-xl border p-3.5 text-xs flex items-center justify-between ${
-          verifyReport.verified
-            ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-300"
-            : "border-rose-500/30 bg-rose-500/5 text-rose-300"
-        }`}>
-          <div className="flex items-center gap-2">
-            <span className={`h-2 w-2 rounded-full ${verifyReport.verified ? "bg-emerald-400 animate-pulse" : "bg-rose-400"}`} />
-            <span className="font-semibold">
-              {verifyReport.verified ? "Cryptographic Integrity Verified:" : "Integrity Failure:"}
-            </span>
-            <span className="text-slate-300">{verifyReport.details}</span>
+      {/* ─── ERROR BANNER ─── */}
+      {error && (
+        <div className="rounded-lg border border-[#F8D5D0] bg-[#FDF1EF] p-4 text-xs text-[#943425] flex items-start gap-3">
+          <XCircleIcon size={16} className="shrink-0 mt-0.5" />
+          <div>
+            <div className="font-semibold text-[#202629]">Connection Error</div>
+            <p className="text-[#5A6063] mt-0.5">{error}</p>
           </div>
-          <span className="font-mono text-[10px] text-slate-400">
-            {verifyReport.valid_records} valid records
-          </span>
         </div>
       )}
 
-      {/* Filter Bar */}
+      {/* ─── B. CRYPTOGRAPHIC INTEGRITY VERIFICATION BANNER ─── */}
+      {verifyReport && (
+        <section
+          className={`rounded-lg border p-4 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs ${
+            verifyReport.verified
+              ? "border-[#D4E8DC] bg-[#EDF5F0] text-[#234E39]"
+              : "border-[#F8D5D0] bg-[#FDF1EF] text-[#943425]"
+          }`}
+        >
+          <div className="flex items-start sm:items-center gap-3">
+            {verifyReport.verified ? (
+              <CheckCircleIcon size={18} className="shrink-0 mt-0.5 sm:mt-0 text-[#234E39]" />
+            ) : (
+              <ExclamationIcon size={18} className="shrink-0 mt-0.5 sm:mt-0 text-[#943425]" />
+            )}
+            <div>
+              <div className="font-semibold text-[#202629]">
+                {verifyReport.verified
+                  ? "Cryptographic Hash Chain Verified (SHA-256 HMAC)"
+                  : "Ledger Corruption Detected"}
+              </div>
+              <p className="text-[#5A6063] mt-0.5">{verifyReport.details}</p>
+            </div>
+          </div>
+
+          <div className="font-mono text-[11px] shrink-0 self-start sm:self-auto text-right">
+            <span className="text-[#202629] font-semibold">{verifyReport.valid_records}</span> records
+            sequentially linked
+          </div>
+        </section>
+      )}
+
+      {/* ─── C. METRICS STRIP ─── */}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-lg border border-[#E4E9E8] bg-[#FFFFFF] p-4 shadow-xs">
+          <div className="flex items-center justify-between text-xs text-[#5A6063]">
+            <span className="font-semibold uppercase tracking-wider text-[10px] font-mono">Ledger Records Loaded</span>
+            <ListIcon size={15} className="text-[#787E81]" />
+          </div>
+          <div className="mt-2 text-2xl font-bold font-mono text-[#202629]">
+            {loading ? "—" : events.length}
+          </div>
+          <div className="mt-1 text-[11px] text-[#787E81]">
+            Events matching current query window
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-[#E4E9E8] bg-[#FFFFFF] p-4 shadow-xs">
+          <div className="flex items-center justify-between text-xs text-[#5A6063]">
+            <span className="font-semibold uppercase tracking-wider text-[10px] font-mono">Allowed Executions</span>
+            <CheckCircleIcon size={15} className="text-[#234E39]" />
+          </div>
+          <div className="mt-2 text-2xl font-bold font-mono text-[#234E39]">
+            {loading ? "—" : allowedCount}
+          </div>
+          <div className="mt-1 text-[11px] text-[#787E81]">
+            Operations that cleared deterministic policy
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-[#E4E9E8] bg-[#FFFFFF] p-4 shadow-xs">
+          <div className="flex items-center justify-between text-xs text-[#5A6063]">
+            <span className="font-semibold uppercase tracking-wider text-[10px] font-mono">Blocked Invocations</span>
+            <XCircleIcon size={15} className="text-[#943425]" />
+          </div>
+          <div className="mt-2 text-2xl font-bold font-mono text-[#943425]">
+            {loading ? "—" : blockedCount}
+          </div>
+          <div className="mt-1 text-[11px] text-[#787E81]">
+            Halted at execution boundary (fail-closed)
+          </div>
+        </div>
+      </section>
+
+      {/* ─── D. INVESTIGATION FILTER BAR ─── */}
       <form
         onSubmit={handleFilterSubmit}
-        className="grid grid-cols-1 gap-3 rounded-xl border border-[#1a2233] bg-[#0d111a] p-3.5 sm:grid-cols-4"
+        className="grid grid-cols-1 gap-3 rounded-lg border border-[#E4E9E8] bg-[#FFFFFF] p-4 sm:grid-cols-4 text-xs shadow-xs"
       >
         <div>
-          <label className="block text-[11px] font-medium text-slate-400 mb-1">
-            Filter by Verdict
+          <label className="block text-[11px] font-semibold text-[#5A6063] mb-1.5">
+            Decision Verdict
           </label>
           <select
             value={verdictFilter}
             onChange={(e) => setVerdictFilter(e.target.value)}
-            className="w-full rounded-lg border border-[#1a2233] bg-[#0a0e17] px-2.5 py-1.5 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none"
+            className="w-full rounded border border-[#E4E9E8] bg-[#FFFFFF] px-3 py-1.5 text-xs font-mono text-[#202629] focus:border-[#485F84] focus:outline-none"
           >
-            <option value="ALL">All Decisions</option>
+            <option value="ALL">All Verdicts</option>
             <option value="ALLOW">ALLOW (Authorized)</option>
-            <option value="DENY">DENY (Blocked)</option>
+            <option value="DENY">DENY (Halted)</option>
             <option value="REQUIRE_APPROVAL">REQUIRE_APPROVAL (Escalated)</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-[11px] font-medium text-slate-400 mb-1">
-            Tool Name
+          <label className="block text-[11px] font-semibold text-[#5A6063] mb-1.5">
+            Tool Target
           </label>
           <input
             type="text"
             value={toolSearch}
             onChange={(e) => setToolSearch(e.target.value)}
-            placeholder="e.g. email:send"
-            className="w-full rounded-lg border border-[#1a2233] bg-[#0a0e17] px-2.5 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:border-emerald-500 focus:outline-none font-mono"
+            placeholder="e.g. database:query"
+            className="w-full rounded border border-[#E4E9E8] bg-[#FFFFFF] px-3 py-1.5 text-xs font-mono text-[#202629] placeholder:text-[#787E81] focus:border-[#485F84] focus:outline-none"
           />
         </div>
 
         <div>
-          <label className="block text-[11px] font-medium text-slate-400 mb-1">
-            Agent ID
+          <label className="block text-[11px] font-semibold text-[#5A6063] mb-1.5">
+            Originating Agent ID
           </label>
           <input
             type="text"
             value={agentSearch}
             onChange={(e) => setAgentSearch(e.target.value)}
             placeholder="e.g. support-agent"
-            className="w-full rounded-lg border border-[#1a2233] bg-[#0a0e17] px-2.5 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:border-emerald-500 focus:outline-none font-mono"
+            className="w-full rounded border border-[#E4E9E8] bg-[#FFFFFF] px-3 py-1.5 text-xs font-mono text-[#202629] placeholder:text-[#787E81] focus:border-[#485F84] focus:outline-none"
           />
         </div>
 
-        <div className="flex items-end">
+        <div className="flex items-end gap-2">
           <button
             type="submit"
-            className="w-full rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 transition-colors"
+            className="flex-1 rounded border border-[#485F84] bg-[#485F84] px-3 py-1.5 text-xs font-semibold text-[#FFFFFF] hover:bg-[#3C5377] transition-all cursor-pointer shadow-xs"
           >
             Apply Query
           </button>
+          {(activeQuery.verdict !== "ALL" || activeQuery.tool || activeQuery.agent) && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="rounded border border-[#E4E9E8] bg-transparent px-3 py-1.5 text-xs font-medium text-[#5A6063] hover:text-[#202629] hover:border-[#ADB3B2] transition-colors cursor-pointer"
+            >
+              Reset
+            </button>
+          )}
         </div>
       </form>
 
-      {/* Error */}
-      {error && (
-        <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-4 text-xs text-rose-400">
-          {error}
-        </div>
-      )}
-
-      {/* Events Table */}
-      <div className="rounded-xl border border-[#1a2233] bg-[#0d111a] overflow-hidden">
-        {events.length === 0 && !loading ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <ListIcon size={24} className="text-slate-600 mb-2" />
-            <p className="text-xs font-medium text-slate-400">No matching audit events</p>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Clear or change your filters to search other security events
+      {/* ─── E. AUDIT EVENTS TABLE ─── */}
+      <section className="rounded-lg border border-[#E4E9E8] bg-[#FFFFFF] shadow-xs overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center text-xs text-[#787E81] font-mono">
+            Loading cryptographic audit records...
+          </div>
+        ) : events.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+            <ListIcon size={24} className="text-[#787E81] mb-2" />
+            <p className="text-xs font-semibold text-[#202629]">No matching audit events</p>
+            <p className="mt-1 text-[11px] text-[#787E81] max-w-sm">
+              No runtime records match the current query parameters. Clear filters to inspect all
+              historical telemetry.
             </p>
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="mt-4 inline-flex items-center gap-1.5 rounded border border-[#E4E9E8] bg-[#FFFFFF] px-3 py-1.5 text-xs font-medium text-[#5A6063] hover:text-[#202629] transition-colors cursor-pointer shadow-xs"
+            >
+              Clear All Filters
+            </button>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-[#1a2233] bg-[#0a0e17] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  <th className="px-5 py-2.5">Timestamp</th>
-                  <th className="px-5 py-2.5">Agent</th>
-                  <th className="px-5 py-2.5">Tool Target</th>
-                  <th className="px-5 py-2.5">Verdict</th>
-                  <th className="px-5 py-2.5">Risk Score</th>
-                  <th className="px-5 py-2.5">Enforcement Reason</th>
-                  <th className="px-5 py-2.5 text-right">Execution</th>
+                <tr className="border-b border-[#E4E9E8] bg-[#F2F4F3] text-[10px] font-mono font-semibold uppercase tracking-wider text-[#5A6063]">
+                  <th className="px-5 py-3">Timestamp (UTC)</th>
+                  <th className="px-5 py-3">Agent Principal</th>
+                  <th className="px-5 py-3">Tool Target</th>
+                  <th className="px-5 py-3">Verdict</th>
+                  <th className="px-5 py-3">Risk Score</th>
+                  <th className="px-5 py-3">Enforcement Reason</th>
+                  <th className="px-5 py-3 text-right">Execution</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#161f30]">
+              <tbody className="divide-y divide-[#E4E9E8]">
                 {events.map((ev) => (
                   <tr
                     key={ev.id}
                     onClick={() => setSelectedEvent(ev)}
-                    className="hover:bg-[#121824]/60 transition-colors cursor-pointer"
+                    className="hover:bg-[#F8F9F8] transition-colors cursor-pointer"
                   >
-                    <td className="whitespace-nowrap px-5 py-2.5 font-mono text-[11px] text-slate-400">
+                    <td className="px-5 py-3.5 font-mono text-[11px] text-[#787E81] whitespace-nowrap">
                       {formatDate(ev.timestamp)}
                     </td>
-                    <td className="whitespace-nowrap px-5 py-2.5 font-mono text-slate-300">
+
+                    <td className="px-5 py-3.5 font-mono text-[11px] text-[#202629] whitespace-nowrap">
                       {ev.agent_id || "—"}
                     </td>
-                    <td className="whitespace-nowrap px-5 py-2.5 font-mono">
-                      <span className="rounded bg-[#162032] px-2 py-0.5 text-emerald-400 border border-[#202b3f]">
-                        {ev.tool_name || "—"}
+
+                    <td className="px-5 py-3.5 font-mono text-[11px] whitespace-nowrap">
+                      <span className="rounded bg-[#F2F4F3] px-2 py-0.5 text-[#485F84] border border-[#E4E9E8] font-semibold">
+                        {ev.tool_name}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-2.5">
-                      <VerdictBadge verdict={ev.verdict as DecisionVerdict} />
+
+                    <td className="px-5 py-3.5 whitespace-nowrap">
+                      <VerdictBadge verdict={ev.verdict} />
                     </td>
-                    <td className="whitespace-nowrap px-5 py-2.5 font-mono text-[11px] text-slate-400">
+
+                    <td className="px-5 py-3.5 font-mono text-[11px] text-[#5A6063] whitespace-nowrap">
                       {ev.risk_score.toFixed(2)}
                     </td>
-                    <td className="max-w-xs truncate px-5 py-2.5 text-[11px] text-slate-400">
+
+                    <td className="px-5 py-3.5 text-[11px] text-[#5A6063] max-w-md truncate" title={ev.reason}>
                       {ev.reason}
                     </td>
-                    <td className="whitespace-nowrap px-5 py-2.5 text-right font-mono text-[11px]">
-                      {ev.execution_success === true ? (
-                        <span className="text-emerald-400 font-semibold">SUCCESS</span>
-                      ) : ev.execution_success === false ? (
-                        <span className="text-rose-400 font-semibold">FAILED</span>
-                      ) : (
-                        <span className="text-slate-600">—</span>
-                      )}
+
+                    <td className="px-5 py-3.5 text-right font-mono text-[11px] text-[#485F84] whitespace-nowrap">
+                      <span className="hover:underline font-semibold">Inspect &rarr;</span>
                     </td>
                   </tr>
                 ))}
@@ -253,88 +404,113 @@ export default function AuditPage() {
             </table>
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Event Details Modal */}
+      {/* ─── F. FORENSIC EVENT INSPECTION MODAL ─── */}
       {selectedEvent && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="audit-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#202629]/40 backdrop-blur-xs p-4"
           onClick={() => setSelectedEvent(null)}
         >
           <div
-            className="w-full max-w-xl rounded-xl border border-[#202b3f] bg-[#0f1420] p-6 shadow-2xl"
+            className="w-full max-w-2xl rounded-lg border border-[#E4E9E8] bg-[#FFFFFF] p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between border-b border-[#1a2233] pb-4">
-              <div>
-                <h3 className="text-base font-bold text-slate-100">
-                  Security Event Audit Record
+            <div className="flex items-center justify-between border-b border-[#E4E9E8] pb-3">
+              <div className="flex items-center gap-2">
+                <h3 id="audit-modal-title" className="text-base font-semibold text-[#202629]">
+                  Cryptographic Audit Record
                 </h3>
-                <p className="font-mono text-[11px] text-slate-500 mt-0.5">
-                  ID: {selectedEvent.id}
-                </p>
+                <VerdictBadge verdict={selectedEvent.verdict} />
               </div>
-              <VerdictBadge verdict={selectedEvent.verdict as DecisionVerdict} />
+              <button
+                type="button"
+                onClick={() => setSelectedEvent(null)}
+                className="text-[#787E81] hover:text-[#202629] text-base p-1 cursor-pointer"
+                aria-label="Close modal"
+              >
+                ✕
+              </button>
             </div>
 
-            <div className="mt-4 space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3 p-3 rounded border border-[#E4E9E8] bg-[#F8F9F8]">
                 <div>
-                  <span className="text-slate-400">Timestamp:</span>
-                  <p className="font-mono text-slate-200 mt-0.5">{formatDate(selectedEvent.timestamp)}</p>
+                  <span className="text-[10px] font-mono text-[#787E81] uppercase block">Record UUID</span>
+                  <span className="font-mono text-[#202629] text-[11px] select-all">
+                    {selectedEvent.id}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-slate-400">Agent ID:</span>
-                  <p className="font-mono text-slate-200 mt-0.5">{selectedEvent.agent_id || "—"}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-slate-400">Tool Target:</span>
-                  <p className="font-mono text-emerald-400 mt-0.5">{selectedEvent.tool_name || "—"}</p>
+                  <span className="text-[10px] font-mono text-[#787E81] uppercase block">Timestamp</span>
+                  <span className="font-mono text-[#5A6063] text-[11px]">
+                    {formatDate(selectedEvent.timestamp)}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-slate-400">Policy Reference:</span>
-                  <p className="font-mono text-slate-200 mt-0.5">{selectedEvent.policy_id || "—"}</p>
+                  <span className="text-[10px] font-mono text-[#787E81] uppercase block">Agent Principal</span>
+                  <span className="font-mono font-semibold text-[#202629]">
+                    {selectedEvent.agent_id || "Unregistered"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono text-[#787E81] uppercase block">Tool Invocation</span>
+                  <span className="font-mono font-semibold text-[#485F84]">
+                    {selectedEvent.tool_name}
+                  </span>
                 </div>
               </div>
 
               <div>
-                <span className="text-slate-400">Authorization Reason:</span>
-                <p className="mt-1 rounded bg-[#0a0e17] p-2.5 text-xs text-slate-300 border border-[#1a2233]">
+                <span className="text-[10px] font-mono text-[#787E81] uppercase block mb-1">
+                  Sequential SHA-256 HMAC Action Hash
+                </span>
+                <div className="p-2.5 rounded bg-[#F2F4F3] border border-[#E4E9E8] font-mono text-[11px] text-[#202629] break-all select-all">
+                  {selectedEvent.action_hash || "0x00000000000000000000000000000000"}
+                </div>
+              </div>
+
+              {selectedEvent.metadata_json && (
+                <div>
+                  <span className="text-[10px] font-mono text-[#787E81] uppercase block mb-1">
+                    Event Execution Metadata & Parameters
+                  </span>
+                  <pre className="p-3 rounded bg-[#0C0F0E] text-[#BEEDD1] border border-[#282A30] font-mono text-[11px] overflow-x-auto max-h-48 custom-scrollbar">
+                    {JSON.stringify(selectedEvent.metadata_json, null, 2)}
+                  </pre>
+                </div>
+              )}
+
+              <div>
+                <span className="text-[10px] font-mono text-[#787E81] uppercase block mb-1">
+                  Enforcement Justification & Policy Stage Log
+                </span>
+                <p className="p-3 rounded bg-[#F8F9F8] border border-[#E4E9E8] text-[#5A6063] leading-relaxed">
                   {selectedEvent.reason}
                 </p>
               </div>
 
-              {selectedEvent.action_hash && (
-                <div>
-                  <span className="text-slate-400">Canonical Action Hash:</span>
-                  <p className="font-mono text-[11px] break-all bg-[#0a0e17] p-2 rounded border border-[#1a2233] text-slate-400 mt-1">
-                    {selectedEvent.action_hash}
-                  </p>
-                </div>
-              )}
-
-              {selectedEvent.approval_id && (
-                <div>
-                  <span className="text-slate-400">Linked Approval ID:</span>
-                  <p className="font-mono text-[11px] text-amber-400 mt-1">{selectedEvent.approval_id}</p>
-                </div>
-              )}
-
               <div>
-                <span className="text-slate-400">Event Metadata (JSON):</span>
-                <pre className="font-mono text-[11px] bg-[#0a0e17] p-3 rounded border border-[#1a2233] text-slate-300 overflow-x-auto max-h-36 mt-1">
-                  {JSON.stringify(selectedEvent.metadata_json, null, 2)}
+                <span className="text-[10px] font-mono text-[#787E81] uppercase block mb-1">
+                  Complete Canonical Event Payload
+                </span>
+                <pre className="p-3 rounded bg-[#0C0F0E] text-[#ADB3B2] border border-[#282A30] font-mono text-[10px] overflow-x-auto max-h-48 custom-scrollbar">
+                  {JSON.stringify(selectedEvent, null, 2)}
                 </pre>
               </div>
             </div>
 
-            <div className="mt-5 flex justify-end pt-3 border-t border-[#1a2233]">
+            <div className="flex items-center justify-between pt-3 border-t border-[#E4E9E8]">
+              <span className="text-[10px] font-mono text-[#787E81]">
+                Risk Score: {selectedEvent.risk_score.toFixed(2)}
+              </span>
               <button
+                type="button"
                 onClick={() => setSelectedEvent(null)}
-                className="rounded border border-[#1a2233] px-3.5 py-1.5 text-xs font-medium text-slate-400 hover:bg-[#121824]"
+                className="px-3 py-1.5 rounded border border-[#E4E9E8] bg-transparent text-xs font-medium text-[#5A6063] hover:text-[#202629] transition-colors cursor-pointer"
               >
                 Close
               </button>

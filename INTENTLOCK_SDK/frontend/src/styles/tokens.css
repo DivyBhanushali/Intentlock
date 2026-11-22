@@ -1,0 +1,135 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   SICTACK Design System v1.0 — Foundation Tokens
+   Approved Concept A: Editorial Infrastructure (Stripe Press / Linear)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root,
+[data-theme="warm-light"],
+.theme-warm-light {
+  /* ─── Warm Alabaster Surfaces (Light Mode) ─── */
+  --surface-canvas: #F8F9F8;         /* Approved Concept A Warm Alabaster */
+  --surface-card: #FFFFFF;           /* Elevated Pure White Card */
+  --surface-lowest: #FFFFFF;         /* Pure white container lowest */
+  --surface-low: #F2F4F3;            /* Inset subtle container low */
+  --surface-container: #EBEEED;      /* Badge / chip container */
+  --surface-high: #E4E9E8;           /* Subtle borders & interactive hover */
+  --surface-highest: #DDE4E3;        /* Active / focused hairline border */
+  --surface-dim: #D4DCDA;
+  --surface-overlay: rgba(12, 15, 14, 0.4);
+
+  /* Legacy aliases for backward compatibility */
+  --surface-subtle: #F2F4F3;
+  --surface-muted: #EBEEED;
+  --surface-hover: #E4E9E8;
+  --surface-active: #DDE4E3;
+
+  /* ─── Deep Charcoal & Slate Typography ─── */
+  --text-primary: #202629;           /* Primary text / On-Surface */
+  --text-secondary: #56585D;         /* Slate Secondary metadata (6.2:1 contrast) */
+  --text-tertiary: #757C7B;          /* Outline / Muted Labels (4.8:1 contrast) */
+  --text-disabled: #ADB3B2;          /* Disabled states */
+  --text-inverse: #FFFFFF;           /* Text on dark buttons */
+
+  /* ─── Hairline Structural Borders ─── */
+  --border-subtle: #E4E9E8;          /* Hairline interior dividers */
+  --border-default: #DDE4E3;         /* Container & input borders */
+  --border-strong: #ADB3B2;          /* Active / focused borders */
+
+  /* ─── Primary Brand Accent (Archival Slate Blue) ─── */
+  --accent-brand: #485F84;           /* Approved Concept A Slate Blue */
+  --accent-brand-hover: #3C5377;
+  --accent-brand-subtle: #D5E3FF;
+  --focus-ring: #485F84;
+
+  /* ─── Semantic Status Accents ─── */
+  --status-allowed: #234E39;         /* Muted Pine */
+  --status-allowed-bg: #F0F7F3;
+  --status-allowed-border: #C8E2D4;
+
+  --status-denied: #943425;          /* Warm Terracotta */
+  --status-denied-bg: #FBF1F0;
+  --status-denied-border: #F2CDC6;
+
+  --status-approval: #8D5B18;        /* Warm Amber Clay */
+  --status-approval-bg: #FEF7EC;
+  --status-approval-border: #F6DEBF;
+
+  --status-info: #485F84;            /* Slate Blue */
+  --status-info-bg: #D5E3FF;
+  --status-info-border: #BBD3FD;
+
+  /* ─── Natural Ambient Elevation (No Neon Glows) ─── */
+  --shadow-sm: 0 1px 2px rgba(45, 52, 51, 0.04);
+  --shadow-md: 0 1px 3px rgba(45, 52, 51, 0.05), 0 4px 12px rgba(45, 52, 51, 0.03);
+  --shadow-lg: 0 4px 6px rgba(45, 52, 51, 0.04), 0 12px 24px rgba(45, 52, 51, 0.06);
+
+  /* ─── Fonts & Geometry ─── */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  --font-display: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* ─── Container Max Widths ─── */
+  --container-marketing: 1240px;
+  --container-dashboard: 1536px;
+  --container-docs: 1440px;
+  --container-narrow: 440px;
+  --reading-width: 720px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Considered Dark Mode Companion (Zero Neon)
+   ═══════════════════════════════════════════════════════════════════════ */
+[data-theme="warm-dark"],
+.theme-warm-dark {
+  --surface-canvas: #0C0F0E;
+  --surface-card: #161A1D;
+  --surface-lowest: #161A1D;
+  --surface-low: #1C2125;
+  --surface-container: #22282D;
+  --surface-high: #2D343A;
+  --surface-highest: #384249;
+  --surface-dim: #13171A;
+  --surface-overlay: rgba(0, 0, 0, 0.7);
+
+  --surface-subtle: #1C2125;
+  --surface-muted: #22282D;
+  --surface-hover: #2D343A;
+  --surface-active: #384249;
+
+  --text-primary: #EDEDEB;
+  --text-secondary: #A6A8B0;
+  --text-tertiary: #757C7B;
+  --text-disabled: #4E5057;
+  --text-inverse: #0C0F0E;
+
+  --border-subtle: #22282D;
+  --border-default: #2D343A;
+  --border-strong: #485F84;
+
+  --accent-brand: #6B8AB6;
+  --accent-brand-hover: #83A3D0;
+  --accent-brand-subtle: #1C2A3E;
+  --focus-ring: #6B8AB6;
+
+  --status-allowed: #529B71;
+  --status-allowed-bg: #11281B;
+  --status-allowed-border: #1D4730;
+
+  --status-denied: #D96552;
+  --status-denied-bg: #2C1210;
+  --status-denied-border: #521E19;
+
+  --status-approval: #D99B43;
+  --status-approval-bg: #2B1E0C;
+  --status-approval-border: #4D3412;
+
+  --status-info: #6B8AB6;
+  --status-info-bg: #142236;
+  --status-info-border: #233D61;
+}

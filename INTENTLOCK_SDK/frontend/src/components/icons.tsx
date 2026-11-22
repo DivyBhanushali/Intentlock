@@ -1,4 +1,4 @@
-// INTENTLOCK – Strict-sized, high-precision Cybersecurity Icons
+// SICTACK – Strict-sized, high-precision Cybersecurity Icons
 
 import React from "react";
 
@@ -526,6 +526,28 @@ export function SparklesIcon({ size = 16, className = "" }: IconProps) {
       style={{ width: size, height: size, minWidth: size, minHeight: size }}
     >
       <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+    </svg>
+  );
+}
+
+export function GitBranchIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`shrink-0 ${className}`}
+      style={{ width: size, height: size, minWidth: size, minHeight: size }}
+    >
+      <line x1="6" y1="3" x2="6" y2="15" />
+      <circle cx="18" cy="6" r="3" />
+      <circle cx="6" cy="18" r="3" />
+      <path d="M18 9a9 9 0 0 1-9 9" />
     </svg>
   );
 }
